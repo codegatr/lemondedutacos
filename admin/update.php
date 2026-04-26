@@ -41,6 +41,102 @@ function ver_compare(string $a, string $b): int
 $action = $_POST['action'] ?? '';
 $current_ver = APP_VERSION;
 
+/* === MANUEL ZIP YÜKLEME (GitHub erişimi olmadığında alternatif) === */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'manual_apply') {
+    csrf_required();
+    @set_time_limit(300);
+    @ini_set('memory_limit', '256M');
+
+    $err = null;
+    $log = [];
+    $hist_id = null;
+
+    try {
+        if (empty($_FILES['zipfile']['name']) || $_FILES['zipfile']['error'] !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('ZIP dosyası seçilmedi veya yüklenemedi (kod: ' . ($_FILES['zipfile']['error'] ?? 'bilinmiyor') . ')');
+        }
+        $tmpZip = $_FILES['zipfile']['tmp_name'];
+        if (!str_ends_with(strtolower($_FILES['zipfile']['name']), '.zip')) {
+            throw new RuntimeException('Sadece .zip dosyası kabul edilir.');
+        }
+
+        $log[] = "ZIP yüklendi: " . round($_FILES['zipfile']['size']/1024, 1) . " KB";
+
+        // History kaydı
+        $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
+            ->execute([$current_ver, 'manuel', 'failed', "Manuel ZIP başlatıldı...", $cu['id']]);
+        $hist_id = (int)$pdo->lastInsertId();
+
+        // Çıkar
+        $tmpDir = sys_get_temp_dir() . "/lmdt_man_" . bin2hex(random_bytes(4));
+        @mkdir($tmpDir, 0755, true);
+        $zip = new ZipArchive();
+        if ($zip->open($tmpZip) !== true) throw new RuntimeException("ZIP açılamadı (geçersiz format).");
+        $zip->extractTo($tmpDir);
+        $zip->close();
+
+        $contents = array_values(array_diff(scandir($tmpDir), ['.', '..']));
+        $extractRoot = $tmpDir;
+        if (count($contents) === 1 && is_dir($tmpDir . '/' . $contents[0])) {
+            $extractRoot = $tmpDir . '/' . $contents[0];
+        }
+
+        // version.txt veya manifest.json'dan yeni sürümü oku
+        $newVer = 'manuel';
+        if (file_exists($extractRoot . '/version.txt')) {
+            $newVer = trim(file_get_contents($extractRoot . '/version.txt'));
+        } elseif (file_exists($extractRoot . '/manifest.json')) {
+            $mf = json_decode(file_get_contents($extractRoot . '/manifest.json'), true);
+            $newVer = $mf['version'] ?? 'manuel';
+        }
+
+        $protect = ['uploads', 'install.lock', 'includes/config.php'];
+        $rootDir = realpath(__DIR__ . '/..');
+
+        // Recursive copy
+        $copy = function($src, $dst) use (&$copy, $protect, $rootDir) {
+            if (!is_dir($src)) {
+                $rel = ltrim(str_replace($rootDir, '', $dst), '/');
+                foreach ($protect as $p) if (str_starts_with($rel, $p)) return;
+                @copy($src, $dst);
+                return;
+            }
+            if (!is_dir($dst)) @mkdir($dst, 0755, true);
+            foreach (array_diff(scandir($src), ['.', '..']) as $item) {
+                $copy("$src/$item", "$dst/$item");
+            }
+        };
+        $copy($extractRoot, $rootDir);
+
+        $log[] = "Dosyalar kopyalandı.";
+
+        // Cleanup
+        $rmrf = function($p) use (&$rmrf) {
+            if (is_dir($p)) {
+                foreach (array_diff(scandir($p), ['.', '..']) as $i) $rmrf("$p/$i");
+                @rmdir($p);
+            } else @unlink($p);
+        };
+        $rmrf($tmpDir);
+
+        if ($hist_id) {
+            $pdo->prepare("UPDATE update_history SET status='success', to_version=?, notes=? WHERE id=?")
+                ->execute([$newVer, implode("\n", $log), $hist_id]);
+        }
+        $duration = round(microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true)), 1);
+        flash_set('success', "Manuel güncelleme tamamlandı! Yeni sürüm: $newVer");
+        header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration); exit;
+
+    } catch (Throwable $e) {
+        if ($hist_id) {
+            $pdo->prepare("UPDATE update_history SET status='failed', notes=? WHERE id=?")
+                ->execute([implode("\n", $log) . "\nHATA: " . $e->getMessage(), $hist_id]);
+        }
+        flash_set('error', 'Manuel güncelleme hatası: ' . $e->getMessage());
+        header('Location: update.php'); exit;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
     csrf_required();
 
@@ -363,6 +459,77 @@ function startUpdate(form) {
     <tr><th>Repo URL</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?></a></td></tr>
     <tr><th>Releases</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">Tüm sürümleri gör →</a></td></tr>
   </table>
+</div>
+
+<?php
+// Bağlantı testi - GitHub erişilebilir mi?
+$connectivity = ['allow_url_fopen' => (bool)ini_get('allow_url_fopen'), 'curl' => function_exists('curl_init')];
+$github_test = null;
+if ($connectivity['allow_url_fopen']) {
+    $url = "https://api.github.com/repos/" . GITHUB_OWNER . "/" . GITHUB_REPO . "/releases/latest";
+    $h = ["User-Agent: lemondedutacos-updater", "Accept: application/vnd.github+json"];
+    if (GITHUB_TOKEN !== '') $h[] = "Authorization: Bearer " . GITHUB_TOKEN;
+    $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$h),'timeout'=>5,'ignore_errors'=>true]]);
+    $resp = @file_get_contents($url, false, $ctx);
+    if ($resp === false) {
+        $github_test = ['ok' => false, 'msg' => 'Bağlantı kurulamadı (timeout veya firewall)'];
+    } else {
+        $code = isset($http_response_header[0]) ? $http_response_header[0] : '';
+        $j = json_decode($resp, true);
+        if (str_contains($code, '200') && isset($j['tag_name'])) {
+            $github_test = ['ok' => true, 'msg' => "GitHub erişilebilir, son sürüm: " . $j['tag_name']];
+        } else {
+            $github_test = ['ok' => false, 'msg' => "API hatası: " . trim($code) . " — " . ($j['message'] ?? 'bilinmiyor')];
+        }
+    }
+}
+?>
+
+<div class="card">
+  <h2><i class="fa-solid fa-stethoscope"></i> Bağlantı Diagnostik</h2>
+  <table>
+    <tr><th style="width:200px">PHP <code>allow_url_fopen</code></th><td><?= $connectivity['allow_url_fopen'] ? '<span class="badge b-on">Açık</span>' : '<span class="badge b-off">KAPALI</span> (php.ini\'de açın)' ?></td></tr>
+    <tr><th>cURL</th><td><?= $connectivity['curl'] ? '<span class="badge b-on">Mevcut</span>' : '<span class="badge b-info">Yok</span>' ?></td></tr>
+    <?php if ($github_test): ?>
+      <tr><th>GitHub API</th>
+        <td>
+          <?php if ($github_test['ok']): ?>
+            <span class="badge b-on">Erişilebilir</span> <?= e($github_test['msg']) ?>
+          <?php else: ?>
+            <span class="badge b-off">HATA</span> <?= e($github_test['msg']) ?>
+          <?php endif; ?>
+        </td>
+      </tr>
+    <?php endif; ?>
+  </table>
+  <?php if ($github_test && !$github_test['ok']): ?>
+    <div style="margin-top:14px;padding:12px;background:#fef3c7;border-left:4px solid #d97706;border-radius:6px;font-size:13px;line-height:1.7">
+      <strong>⚠ Otomatik güncelleme çalışmıyor.</strong><br>
+      GitHub'a erişim sağlanamadığı için "Güncellemeyi Şimdi Başlat" butonu çalışmaz.
+      <strong>Çözüm:</strong> Aşağıdaki "Manuel Yükleme" bölümünü kullanın.<br>
+      <strong>Olası sebepler:</strong> Repo private + token boş, sunucu firewall, php.ini allow_url_fopen kapalı.
+    </div>
+  <?php endif; ?>
+</div>
+
+<div class="card" style="border-left:4px solid #16a34a">
+  <h2><i class="fa-solid fa-cloud-arrow-up"></i> Manuel Yükleme (GitHub erişimi gerekmez)</h2>
+  <p style="font-size:13px;line-height:1.7;color:var(--muted)">
+    Eğer otomatik güncelleme çalışmıyorsa: GitHub'tan ZIP'i bilgisayarınıza indirin, aşağıdan yükleyin.
+  </p>
+  <ol style="font-size:13px;line-height:1.8;margin:8px 0 14px 22px">
+    <li><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases</a> → en üstteki sürüm</li>
+    <li><strong>Assets</strong> bölümünden <code>lemondedutacos-vX.X.X.zip</code> dosyasını indir</li>
+    <li>Aşağıdaki forma yükle ve "Yükle ve Uygula" tıkla</li>
+  </ol>
+  <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Manuel güncelleme uygulanacak. Devam edilsin mi?')">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="manual_apply">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="file" name="zipfile" accept=".zip" required style="flex:1;min-width:240px">
+      <button type="submit" class="btn"><i class="fa-solid fa-upload"></i> Yükle ve Uygula</button>
+    </div>
+  </form>
 </div>
 
 <div class="card">

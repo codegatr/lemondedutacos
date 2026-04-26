@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,24 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.6",
+            "date": "2026-04-26",
+            "notes": [
+                "KRİTİK: Crud save bug - upload başarısızsa save abort edilir",
+                "  Önceki: upload_file null dönerse save sessizce devam ediyor,",
+                "          'güncellendi' diyor ama görsel yok (kullanıcı şaşkın)",
+                "  Şimdi:  upload null dönerse save abort, edit sayfasına dön,",
+                "          NET hata mesajı gösterilir (kullanıcı sebebi anlar)",
+                "YENİ: Manuel ZIP Yükleme (admin/update.php)",
+                "  GitHub erişimi olmadığında alternatif: kullanıcı bilgisayardan ZIP yükler",
+                "  uploads/install.lock/config.php korunur, diğer dosyalar değişir",
+                "  version.txt veya manifest.json'dan yeni sürüm okunur",
+                "YENİ: Bağlantı Diagnostik (admin/update.php)",
+                "  PHP allow_url_fopen, cURL, GitHub API gerçek bağlantı testi",
+                "  Erişim yoksa kırmızı uyarı + manuel upload yönlendirmesi"
+            ]
+        },
         {
             "version": "1.1.5",
             "date": "2026-04-26",

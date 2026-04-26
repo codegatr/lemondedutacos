@@ -70,16 +70,23 @@ class Crud
         // Yüklenmediyse mevcut değer korunur (UPDATE'te alan SET edilmez).
         foreach ($images as $imgField) {
             if (!empty($_FILES[$imgField]['name'])) {
+                // Kullanıcı yeni dosya seçmiş → upload denemeli
                 $url = upload_file($imgField, $this->cfg['image_dir'] ?? 'sayfa', ALLOWED_IMG);
-                if ($url) {
-                    // delete old
-                    if ($id) {
-                        $stmt = db()->prepare("SELECT $imgField FROM " . $this->cfg['table'] . " WHERE id = ?");
-                        $stmt->execute([$id]);
-                        delete_upload((string)$stmt->fetchColumn());
-                    }
-                    $data[$imgField] = $url;
+                if ($url === null) {
+                    // Upload BAŞARISIZ — save'i abort et, kullanıcı edit sayfasına dönsün
+                    // (upload_file zaten flash_set('error', ...) eklemiştir)
+                    // Mevcut error'a daha açıklayıcı bilgi de ekle
+                    $existingFlash = $_SESSION['_flash']['error'] ?? '';
+                    flash_set('error', 'Görsel yüklenemedi: ' . $existingFlash . ' — KAYIT YAPILMADI. Lütfen tekrar deneyin veya Sistem Diagnostik\'i kontrol edin.');
+                    header('Location: ' . basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new')); exit;
                 }
+                // Upload başarılı → eski dosyayı sil, yeni URL'i kaydet
+                if ($id) {
+                    $stmt = db()->prepare("SELECT $imgField FROM " . $this->cfg['table'] . " WHERE id = ?");
+                    $stmt->execute([$id]);
+                    delete_upload((string)$stmt->fetchColumn());
+                }
+                $data[$imgField] = $url;
             } elseif (!$id) {
                 // Yeni kayıt + dosya yok → DB'ye NULL yaz (varsayılan)
                 $data[$imgField] = null;
