@@ -666,6 +666,29 @@ $branches = db()->query("SELECT id, title FROM branches WHERE is_active = 1 ORDE
     .model-2 .youtube{ background:#FF0000; text-shadow:0 0 #c40000,1px 1px #c40000,2px 2px #c40000,3px 3px #c40000,4px 4px #c40000,5px 5px #c40000,6px 6px #c40000,7px 7px #c40000; }
     .model-2 .youtube:hover{ color:#FF0000; }
 
+    /* ======= LAPTOP SHORT VIEWPORT (13-14" %100 zoom) ======= */
+    @media (min-width:861px) and (max-height:860px){
+      body{ overflow-y:auto !important; height:auto !important; }
+      .hero{
+        min-height:unset;
+        height:auto;
+        rotate:0deg;
+        scale:1;
+        width:100%;
+        margin-left:0;
+        padding:24px 16px 36px;
+      }
+      .hero::before{ display:none; }
+      .contact-wrapper{
+        position:relative;
+        top:auto; left:auto;
+        transform:none;
+        width:min(1180px, 96%);
+        margin:0 auto;
+        scale:1;
+      }
+    }
+
     /* ======= MOBILE ======= */
     @media (max-width:860px){
       body{ overflow-x:hidden; overflow-y:auto; }

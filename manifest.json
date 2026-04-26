@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,18 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.2.3",
+            "date": "2026-04-26",
+            "notes": [
+                "İletişim ve Franchise sayfalarında laptop dar yükseklik fix",
+                "  Yeni media query: (min-width:861px) and (max-height:860px)",
+                "  13-14\" laptop %100 zoom'da Gönder/Form Temizle butonları artık görünüyor",
+                "  Hero'nun -2deg rotation ve scale 1.02'si kaldırılıyor (kısa viewport'ta)",
+                "  contact-wrapper ve franchise-wrap position:absolute → relative (sayfa scroll oluyor)",
+                "Mobil layout (max-width:860px) etkilenmedi, masaüstü geniş ekran (>860 yüksekliği) etkilenmedi"
+            ]
+        },
         {
             "version": "1.2.2",
             "date": "2026-04-26",
