@@ -272,6 +272,24 @@ function format_date(string $datetime, string $fmt = 'd.m.Y H:i'): string {
     }
 }
 
+/* ================== TÜRKÇE KARAKTER NORMALIZE ================== */
+
+/**
+ * Türkçe karakterleri ASCII'ye çevirir.
+ * Dosya isimleri için kullanılır - filesystem encoding sorunlarını önler.
+ * Örn: "seçilmiş.png" → "secilmis.png"
+ */
+function tr_to_ascii(string $s): string {
+    return strtr($s, [
+        'ç' => 'c', 'Ç' => 'C',
+        'ğ' => 'g', 'Ğ' => 'G',
+        'ı' => 'i', 'İ' => 'I',
+        'ö' => 'o', 'Ö' => 'O',
+        'ş' => 's', 'Ş' => 'S',
+        'ü' => 'u', 'Ü' => 'U',
+    ]);
+}
+
 /* ================== ASSETS ================== */
 
 /**

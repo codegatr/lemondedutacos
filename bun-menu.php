@@ -390,15 +390,18 @@ if ($cat_id_for_tenders_crousty && !empty($items_by_cat[$cat_id_for_tenders_crou
   </div>
 </footer>
 <style>
-.footer{flex-wrap:wrap;}
-.footer-legal{display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap;justify-content:center;}
-.footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s;}
-.footer-legal a:hover{color:var(--brand);text-decoration:underline;}
-.footer-legal span{color:var(--muted);opacity:.5;}
-.footer-meta{display:flex;flex-direction:column;align-items:flex-end;text-align:right;}
+.footer{max-width:1280px !important;margin:0 auto !important;padding:22px 36px 26px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:48px !important;flex-wrap:wrap}
+.footer > *{flex:1 1 0;display:flex;align-items:center}
+.footer > .social-nav{justify-content:flex-start}
+.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
+.footer-legal a:hover{color:var(--brand);text-decoration:underline}
+.footer-legal span{color:var(--muted);opacity:.5}
 @media(max-width:940px){
-  .footer{flex-direction:column;gap:10px;text-align:center;}
-  .footer-meta{align-items:center;text-align:center;}
+  .footer{flex-direction:column !important;gap:14px !important;padding:18px 16px !important;text-align:center}
+  .footer > *{flex:none !important;justify-content:center !important;width:100%}
+  .footer > .footer-meta{align-items:center !important;text-align:center}
 }
 </style>
 
@@ -534,5 +537,27 @@ if ($cat_id_for_tenders_crousty && !empty($items_by_cat[$cat_id_for_tenders_crou
     applySearch(e.target.value);
   });
 </script>
+
+<button class="scroll-top" id="scrollTop" aria-label="Yukarı çık" type="button">
+  <i class="fa-solid fa-chevron-up"></i>
+</button>
+<style>
+.scroll-top{position:fixed;bottom:24px;right:24px;width:46px;height:46px;border-radius:50%;background:var(--brand);color:#fff;border:none;cursor:pointer;z-index:1000;display:flex;align-items:center;justify-content:center;font-size:16px;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .25s,transform .25s,visibility .25s,background .2s;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.scroll-top.visible{opacity:1;visibility:visible;transform:translateY(0)}
+.scroll-top:hover{background:#1a3d0a;transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.25)}
+@media(max-width:640px){.scroll-top{bottom:18px;right:18px;width:42px;height:42px;font-size:14px}}
+</style>
+<script>
+(function(){
+  const btn=document.getElementById('scrollTop');
+  if(!btn)return;
+  if(getComputedStyle(document.body).overflow==='hidden'){btn.style.display='none';return;}
+  const onScroll=()=>{(window.scrollY||document.documentElement.scrollTop)>320?btn.classList.add('visible'):btn.classList.remove('visible');};
+  window.addEventListener('scroll',onScroll,{passive:true});
+  btn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+  onScroll();
+})();
+</script>
 </body>
+
 </html>

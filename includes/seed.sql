@@ -26,7 +26,7 @@ INSERT IGNORE INTO menu_groups (id, code, title, label, icon, page_slug, sort_or
 (4, 'tatli', 'TATLI & YAN', 'TATLI & YAN ÜRÜNLER', '/static/img/tatli1.png', 'tatli-menu', 4, 1);
 
 INSERT IGNORE INTO menu_promo_cards (group_id, title, image, image_mobile, tab_code, sort_order, is_active) VALUES
-(1, 'Seçilmiş Lezzetler', '/static/img/yeni/seçilmişlezzetler_1x1.png', '/static/img/yeni/seçilmişlezzetler_1x1_5_mobile.png', 'secilmis', 1, 1),
+(1, 'Seçilmiş Lezzetler', '/static/img/yeni/secilmislezzetler_1x1.png', '/static/img/yeni/secilmislezzetler_1x1_5_mobile.png', 'secilmis', 1, 1),
 (1, 'İmzalı Lezzetler', '/static/img/yeni/imzalilezzetler1x1.png', '/static/img/yeni/imzalilezzetler1x1_5_mobile.png', 'imzali', 2, 1),
 (1, 'Gurme Lezzetler', '/static/img/yeni/gurmelezzetler1x1.png', '/static/img/yeni/gurmelezzetler_1x1_5_mobile.png', 'gurme', 3, 1),
 (2, 'ET BUN', '/static/img/yeni/etbun1x1.png', '/static/img/yeni/etbun1x1_5_mobile.png', 'et-bun', 1, 1),

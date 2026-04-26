@@ -19,6 +19,7 @@ $nav_items = [
     ['pages.php',                  'Sayfa İçerikleri',    'fa-file-lines'],
     ['timeline.php',               'Tarihçe',             'fa-clock-rotate-left'],
     ['users.php',                  'Yöneticiler',         'fa-user-shield'],
+    ['normalize-images.php',       'Görsel Normalize',    'fa-wand-magic-sparkles'],
     ['update.php',                 'Güncelleme',          'fa-cloud-arrow-down'],
 ];
 

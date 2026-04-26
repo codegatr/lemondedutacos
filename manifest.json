@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.9",
+    "version": "1.1.0",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,32 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.0",
+            "date": "2026-04-26",
+            "notes": [
+                "YENİ: Görsel Yollarını Normalize Et aracı (admin/normalize-images.php)",
+                "  - DB'deki Türkçe karakterli görsel yollarını otomatik tespit eder",
+                "  - ASCII karşılığına dönüştürür (ç→c, ş→s, ğ→g, ı→i, ö→o, ü→u)",
+                "  - Disk'te dosya rename dener (UTF-8 ve Unicode escape varyantlarını arar)",
+                "  - Bulamadıklarını kullanıcıya raporlar",
+                "  - FTP/FileZilla'nın #U00e7 escape sequence sorununu çözer",
+                "YENİ: tr_to_ascii() helper fonksiyonu (functions.php)",
+                "seed.sql Türkçe path'leri ASCII'ye çevrildi (yeni install'lar için)",
+                "Footer yatay yayma iyileştirildi:",
+                "  - max-width 1180px → 1280px",
+                "  - padding 18px → 36px (yatay)",
+                "  - gap 14px → 48px",
+                "  - 3 sütun (flex:1 1 0): SOSYAL | YASAL | META her biri eşit alan",
+                "  - meta sütunu sağa yaslı (Copyright + CODEGA alt alta)",
+                "YENİ: Scroll-up butonu (15 sayfada)",
+                "  - Sağ-altta sabit, scroll>320px sonrası belirir",
+                "  - Smooth scroll-to-top",
+                "  - Brand renginde, hover'da koyu yeşile döner",
+                "  - Mobilde küçülür (42x42)",
+                "  - Anasayfada otomatik gizlenir (overflow:hidden olduğu için)"
+            ]
+        },
         {
             "version": "1.0.9",
             "date": "2026-04-26",
