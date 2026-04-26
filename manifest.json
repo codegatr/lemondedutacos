@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,20 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.2",
+            "date": "2026-04-26",
+            "notes": [
+                "Mobile anasayfa: Strip butonları slider üzerinde absolute - referans tasarıma uyumlu",
+                "  Önceki: butonlar hero'nun altında ayrı kırmızı blok",
+                "  Şimdi:  butonlar slider'ın alt kısmındaki yeşil zemine bindirilir (transparent)",
+                "  4 buton yatay tek satır (480px altı dahil)",
+                "Slider boyutu: aspect-ratio 9/16, max-height 80vh - dikey resimle güzel oran",
+                "Buton boyutları: clamp(58px,18vw,90px) - dar ekranlarda küçülür",
+                "Label: beyaz + text-shadow (yeşil zemine kontrast)",
+                "Çok küçük (480px) ekranlarda 48-72px buton"
+            ]
+        },
         {
             "version": "1.1.1",
             "date": "2026-04-26",

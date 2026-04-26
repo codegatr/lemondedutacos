@@ -58,28 +58,31 @@ body{overflow:hidden;display:flex;flex-direction:column;height:100vh;height:100d
 .fix-item img{width:100%;height:320px;object-fit:cover;display:block}
 .fix-caption{padding:14px;font-weight:700;text-align:center;font-size:14px;color:var(--ink)}
 @media(max-width:860px){
-  /* Mobile: tek-sayfa kilitlenmesini iptal et, doğal akış kullan */
+  /* Mobile: doğal akış (header → hero → footer) */
   body{overflow:auto !important;display:block !important;height:auto !important}
-  .hero{flex:none !important;height:auto !important;min-height:auto !important;overflow:visible !important}
-  .hero-slider{height:60vh;min-height:380px}
-  .hero-arrow{width:42px;height:42px;font-size:14px}
-  /* Strip artık hero'nun altında normal akışta - butonlar kesilmez */
-  .strip{position:static !important;padding:24px 12px 20px;background:linear-gradient(180deg,#8b2d2d,#6b1f1f)}
-  .strip-inner{gap:18px;flex-wrap:wrap}
-  .icon-card{width:auto}
-  .icon-btn{width:clamp(72px,20vw,108px);height:clamp(72px,20vw,108px)}
-  .icon-label{font-size:11px;color:#fff}
-  .fixmenu-panel{max-height:90vh;overflow-y:auto}
+  /* Hero kısa olsun, butonlar onun altında değil ÜSTÜNDE absolute kalsın */
+  .hero{flex:none !important;height:auto !important;min-height:auto !important;overflow:hidden !important}
+  .hero-slider{height:auto;min-height:auto;aspect-ratio:9/16;max-height:80vh}
+  .hero-arrow{width:42px;height:42px;font-size:14px;top:38%}
+  /* Strip slider üzerinde absolute - resmin alt kısmındaki yeşil zemine bindirilir */
+  .strip{position:absolute !important;left:0;right:0;bottom:0;padding:14px 10px 16px !important;background:transparent !important;z-index:3}
+  .strip-inner{gap:8px;flex-wrap:nowrap;justify-content:space-between;max-width:100%;padding:0 4px}
+  .icon-card{flex:1 1 0;min-width:0;width:auto;align-items:center}
+  .icon-btn{width:clamp(58px,18vw,90px);height:clamp(58px,18vw,90px);border-width:2px}
+  .icon-img{width:140%;height:140%}
+  .icon-label{font-size:10px;line-height:1.2;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.55);margin-top:6px;text-align:center;white-space:normal;word-break:break-word}
+  .fixmenu-panel{max-height:90vh;overflow-y:auto;padding:18px}
   .fixmenu-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:12px}
-  #croustyOverlay .fixmenu-grid,#tatliOverlay .fixmenu-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
   .fix-item img{height:160px}
   .fix-caption{padding:10px;font-size:12px}
 }
 @media(max-width:480px){
-  .strip-inner{gap:10px;justify-content:space-around}
-  .icon-card{flex:1 1 calc(50% - 10px);max-width:140px}
+  /* Çok küçük ekranlarda butonlar daralsın ama yine 4 sütun olsun */
+  .strip{padding:10px 6px 12px !important}
+  .strip-inner{gap:4px}
+  .icon-btn{width:clamp(48px,16vw,72px);height:clamp(48px,16vw,72px)}
+  .icon-label{font-size:9px;letter-spacing:0}
   .fixmenu-grid{grid-template-columns:1fr !important}
-  #croustyOverlay .fixmenu-grid,#tatliOverlay .fixmenu-grid{grid-template-columns:1fr !important}
   .fix-item img{height:200px}
 }
 ";
