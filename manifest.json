@@ -1,0 +1,23 @@
+{
+    "name": "Le Monde Du Tacos",
+    "version": "1.0.0",
+    "release_date": "2026-04-26",
+    "min_php": "8.1.0",
+    "github": {
+        "owner": "codegatr",
+        "repo": "lemondedutacos"
+    },
+    "changelog": [
+        {
+            "version": "1.0.0",
+            "date": "2026-04-26",
+            "notes": [
+                "İlk sürüm",
+                "Veritabanı tabanlı yönetim paneli",
+                "Tüm menüler (Tacos / Bun / Burger / Tatlı) DB'den geliyor",
+                "Şubeler, Kampanyalar, İş İlanları, İletişim, Franchise formları",
+                "GitHub Releases tabanlı güncelleme sistemi"
+            ]
+        }
+    ]
+}

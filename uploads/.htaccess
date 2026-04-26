@@ -1,0 +1,6 @@
+# Yüklenen dosyalar dizini - PHP yürütme yasak
+<FilesMatch "\.(php|phtml|phar|pl|cgi|sh|py|rb)$">
+    Require all denied
+</FilesMatch>
+Options -Indexes -ExecCGI
+AddType text/plain .php .phtml .phar .pl .cgi .sh
