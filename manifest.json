@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,13 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.1",
+            "date": "2026-04-26",
+            "notes": [
+                "Düzeltme: includes/header.php içindeki yanlış require yolu (includes/includes/functions.php hatası)"
+            ]
+        },
         {
             "version": "1.0.0",
             "date": "2026-04-26",

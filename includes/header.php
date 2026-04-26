@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/functions.php';
 
 $page_slug   = $page_slug   ?? 'home';
 $page_title  = $page_title  ?? setting('site_name', SITE_NAME);
