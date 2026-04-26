@@ -304,32 +304,39 @@ require __DIR__ . '/includes/header.php';
         <p>Aşağıdaki kanallardan bize her zaman ulaşabilirsiniz.</p>
       </div>
       <div class="detail-list">
+        <?php
+          $contactPhone   = setting('contact_phone', '+90 212 444 12 34');
+          $contactEmail   = setting('contact_email', 'info@lemondedutacos.com');
+          $contactHours   = setting('contact_hours', 'Her Gün 10:00 – 23:00');
+          $contactAddress = setting('contact_address', 'Bahçelievler, Adnan Kahveci Blv. No:101/B 34180 İstanbul');
+          $phoneTel = preg_replace('/[^0-9+]/', '', $contactPhone);
+        ?>
         <div class="detail-item">
           <div class="d-icon"><i class="fa-solid fa-phone"></i></div>
           <div class="d-content">
             <div class="d-label">Telefon</div>
-            <div class="d-value"><a href="tel:+902124441234">+90 212 444 12 34</a></div>
+            <div class="d-value"><a href="tel:<?= e($phoneTel) ?>"><?= e($contactPhone) ?></a></div>
           </div>
         </div>
         <div class="detail-item">
           <div class="d-icon"><i class="fa-solid fa-envelope"></i></div>
           <div class="d-content">
             <div class="d-label">E-posta</div>
-            <div class="d-value"><a href="mailto:info@lemondedutacos.com">info@lemondedutacos.com</a></div>
+            <div class="d-value"><a href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a></div>
           </div>
         </div>
         <div class="detail-item">
           <div class="d-icon"><i class="fa-solid fa-clock"></i></div>
           <div class="d-content">
             <div class="d-label">Çalışma Saatleri</div>
-            <div class="d-value">Her Gün &nbsp;10:00 – 23:00</div>
+            <div class="d-value"><?= e($contactHours) ?></div>
           </div>
         </div>
         <div class="detail-item">
           <div class="d-icon"><i class="fa-solid fa-location-dot"></i></div>
           <div class="d-content">
             <div class="d-label">Genel Merkez</div>
-            <div class="d-value">Bahçelievler, Adnan Kahveci Blv. No:101/B<br>34180 İstanbul</div>
+            <div class="d-value"><?= nl2br_safe($contactAddress) ?></div>
           </div>
         </div>
       </div>

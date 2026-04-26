@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,17 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.3.1",
+            "date": "2026-04-26",
+            "notes": [
+                "İletişim sayfası: tüm bilgiler artık admin panelden güncellenebiliyor",
+                "  Telefon, e-posta, çalışma saatleri, adres → settings tablosundan",
+                "  Hiçbir şey hardcoded değil",
+                "Admin → Ayarlar → Çalışma Saatleri alanı eklendi",
+                "Migration 004: contact_hours default değeri ('Her Gün 10:00 – 23:00')"
+            ]
+        },
         {
             "version": "1.3.0",
             "date": "2026-04-26",

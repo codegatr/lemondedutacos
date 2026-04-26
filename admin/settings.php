@@ -7,7 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_required();
     $fields = [
         'site_name','site_tagline','site_logo',
-        'contact_email','contact_phone','contact_address',
+        'contact_email','contact_phone','contact_address','contact_hours',
         'social_facebook','social_instagram','social_twitter','social_youtube',
         'footer_copyright','kvkk_text','commercial_text','mail_to',
     ];
@@ -71,6 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Form mesajları (alıcı e-posta)</label>
         <input type="email" name="mail_to" value="<?= e(setting('mail_to')) ?>">
       </div>
+    </div>
+    <div class="row">
+      <label>Çalışma Saatleri</label>
+      <input type="text" name="contact_hours" value="<?= e(setting('contact_hours')) ?>" placeholder="Örn: Her Gün 10:00 – 23:00">
     </div>
     <div class="row">
       <label>Adres</label>
