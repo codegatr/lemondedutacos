@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,16 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.2.5",
+            "date": "2026-04-26",
+            "notes": [
+                "REVERT v1.2.4: dinamik scale formülü transform chain'i bozuyordu",
+                "  scale(var(--x)) translate(-50%) ile beraber çalışınca form sağa kaydı",
+                "  İletişim ve Franchise tekrar ORİJİNAL halde",
+                "Auto-resize daha iyi düşünülmüş bir yaklaşımla yapılacak"
+            ]
+        },
         {
             "version": "1.2.4",
             "date": "2026-04-26",

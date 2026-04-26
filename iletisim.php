@@ -259,9 +259,7 @@ $branches = db()->query("SELECT id, title FROM branches WHERE is_active = 1 ORDE
       position:absolute;
       top:50%;
       left:50%;
-      /* Viewport yüksekliğine göre dinamik scale: dar yükseklikte form orantılı küçülür, yatay layout korunur */
-      --cw-scale: clamp(0.65, calc((100vh - 164px) / 820 * 1.053), 1.053);
-      transform:translate(-50%, -50%) rotate(2deg) scale(var(--cw-scale));
+      transform:translate(-50%, -50%) rotate(2deg) scale(1.053);
       z-index:5;
       width:min(1060px, 92%);
       display:grid;

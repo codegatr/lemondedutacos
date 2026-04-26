@@ -235,9 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       position:absolute;
       top:50%;
       left:50%;
-      /* Viewport yüksekliğine göre dinamik scale: dar yükseklikte form orantılı küçülür, yatay layout korunur */
-      --fw-scale: clamp(0.62, calc((100vh - 164px) / 800), 1);
-      transform: translate(-52%, -50%) rotate(2deg) scale(var(--fw-scale)); /* hafif sola = sağ alt kurtulur */
+      transform: translate(-52%, -50%) rotate(2deg); /* hafif sola = sağ alt kurtulur */
       z-index:5;
       width: min(1380px, 98%);
     }
