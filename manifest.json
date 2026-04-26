@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,25 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.7",
+            "date": "2026-04-26",
+            "notes": [
+                "YENİ: Migration sistemi (DB schema değişikliklerini otomatik uygular)",
+                "  - migrations/ klasörü, sıralı .sql dosyaları (001_*, 002_* vb.)",
+                "  - _migrations tablosu uygulanmış olanları izler (her migration sadece 1 kez)",
+                "  - Otomatik update sonrası otomatik çalışır",
+                "  - Manuel ZIP yükleme sonrası otomatik çalışır",
+                "  - Admin → Güncelleme'de manuel 'Şimdi Çalıştır' butonu",
+                "  - Bekleyen sayısı sarı badge ile gösterilir",
+                "001_image_nullable.sql: KÖK SORUN ÇÖZÜLDÜ",
+                "  - menu_promo_cards.image, slider.image, campaigns.image kolonları NOT NULL'dı",
+                "  - Crud save NULL atayamıyordu, MySQL '' (boş string) atıyordu",
+                "  - Frontend asset_exists('') false dönüyordu, broken icon görünüyordu",
+                "  - ALTER TABLE ile DEFAULT NULL yapıldı, mevcut '' değerleri NULL'a çevrildi",
+                "002_turkish_chars_to_ascii.sql: Türkçe karakterli path'leri ASCII'ye çevirir"
+            ]
+        },
         {
             "version": "1.1.6",
             "date": "2026-04-26",

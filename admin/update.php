@@ -41,7 +41,21 @@ function ver_compare(string $a, string $b): int
 $action = $_POST['action'] ?? '';
 $current_ver = APP_VERSION;
 
-/* === MANUEL ZIP YÜKLEME (GitHub erişimi olmadığında alternatif) === */
+/* === MIGRATION'LARI MANUEL ÇALIŞTIR === */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'run_migrations') {
+    csrf_required();
+    $migResult = run_migrations();
+    if ($migResult['errors']) {
+        flash_set('error', 'Migration tamamlandı ama hatalar var: ' . implode(' | ', $migResult['errors']));
+    } elseif ($migResult['applied'] > 0) {
+        flash_set('success', "{$migResult['applied']} migration uygulandı, {$migResult['skipped']} zaten uygulanmıştı.");
+    } else {
+        flash_set('info', "Tüm migration'lar zaten güncel ({$migResult['skipped']} kayıt).");
+    }
+    header('Location: update.php'); exit;
+}
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'manual_apply') {
     csrf_required();
     @set_time_limit(300);
@@ -119,12 +133,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'manual_apply') {
         };
         $rmrf($tmpDir);
 
+        // Migration'ları otomatik çalıştır
+        $migResult = run_migrations();
+        if ($migResult['applied'] > 0) {
+            $log[] = "✓ {$migResult['applied']} migration uygulandı: " . implode(', ', array_slice($migResult['log'], -$migResult['applied']));
+        }
+        if ($migResult['errors']) {
+            $log[] = "⚠ Migration hataları: " . implode(' | ', $migResult['errors']);
+        }
+
         if ($hist_id) {
             $pdo->prepare("UPDATE update_history SET status='success', to_version=?, notes=? WHERE id=?")
                 ->execute([$newVer, implode("\n", $log), $hist_id]);
         }
         $duration = round(microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true)), 1);
-        flash_set('success', "Manuel güncelleme tamamlandı! Yeni sürüm: $newVer");
+        $msg = "Manuel güncelleme tamamlandı! Yeni sürüm: $newVer";
+        if ($migResult['applied'] > 0) $msg .= " ({$migResult['applied']} migration uygulandı)";
+        flash_set('success', $msg);
         header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration); exit;
 
     } catch (Throwable $e) {
@@ -258,6 +283,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
             foreach ($touched as $tp) {
                 if (str_ends_with($tp, '.php')) @opcache_invalidate($tp, true);
             }
+        }
+
+        // Migration'ları otomatik çalıştır
+        $log[] = "Migration'lar kontrol ediliyor...";
+        $migResult = run_migrations();
+        if ($migResult['applied'] > 0) {
+            $log[] = "✓ {$migResult['applied']} migration uygulandı";
+            foreach (array_slice($migResult['log'], -($migResult['applied'] + $migResult['skipped'])) as $l) {
+                $log[] = "  $l";
+            }
+        } else {
+            $log[] = "Migration: hepsi güncel ({$migResult['skipped']} zaten uygulanmış)";
+        }
+        if ($migResult['errors']) {
+            $log[] = "⚠ Migration hataları (atlandı): " . implode(' | ', $migResult['errors']);
         }
 
         $duration = round(microtime(true) - $start, 2);
@@ -530,6 +570,84 @@ if ($connectivity['allow_url_fopen']) {
       <button type="submit" class="btn"><i class="fa-solid fa-upload"></i> Yükle ve Uygula</button>
     </div>
   </form>
+</div>
+
+<?php
+// Migration durumu
+$mig_dir = __DIR__ . '/../migrations';
+$mig_files = is_dir($mig_dir) ? array_filter(scandir($mig_dir), function ($f) {
+    return preg_match('/^\d+_.+\.sql$/', $f);
+}) : [];
+sort($mig_files);
+
+// _migrations tablosu var mı, çalıştırılmış olanlar
+$mig_applied = [];
+try {
+    $stmt = $pdo->query("SELECT name, applied_at FROM `_migrations` ORDER BY id");
+    if ($stmt) $mig_applied = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    // Tablo henüz yok
+}
+$applied_names = array_flip(array_column($mig_applied, 'name'));
+$pending_count = count(array_filter($mig_files, function ($f) use ($applied_names) {
+    return !isset($applied_names[$f]);
+}));
+?>
+
+<div class="card" style="<?= $pending_count > 0 ? 'border-left:4px solid #d97706' : '' ?>">
+  <h2>
+    <i class="fa-solid fa-database"></i> Veritabanı Migration'ları
+    <?php if ($pending_count > 0): ?>
+      <span style="background:#d97706;color:white;padding:2px 10px;border-radius:12px;font-size:12px;margin-left:8px"><?= $pending_count ?> bekliyor</span>
+    <?php endif; ?>
+  </h2>
+  <p style="font-size:13px;color:var(--muted);line-height:1.7">
+    Migration'lar veritabanı schema değişikliklerini otomatik uygular.
+    Otomatik veya manuel güncelleme sonrasında otomatik çalışır,
+    aşağıdaki butonla manuel da çalıştırabilirsiniz.
+  </p>
+
+  <?php if (!$mig_files): ?>
+    <div class="empty">migrations/ klasöründe dosya yok.</div>
+  <?php else: ?>
+    <table>
+      <thead><tr><th>Dosya</th><th>Durum</th><th>Uygulanma Zamanı</th></tr></thead>
+      <tbody>
+        <?php foreach ($mig_files as $mf):
+          $applied = null;
+          foreach ($mig_applied as $ma) if ($ma['name'] === $mf) { $applied = $ma; break; }
+        ?>
+          <tr>
+            <td><code style="font-size:12px"><?= e($mf) ?></code></td>
+            <td>
+              <?php if ($applied): ?>
+                <span class="badge b-on">✓ Uygulandı</span>
+              <?php else: ?>
+                <span class="badge b-info">⏳ Bekliyor</span>
+              <?php endif; ?>
+            </td>
+            <td style="font-size:12px;color:var(--muted)">
+              <?= $applied ? format_date($applied['applied_at']) : '—' ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+
+    <?php if ($pending_count > 0): ?>
+      <form method="post" style="margin-top:16px" onsubmit="return confirm('<?= $pending_count ?> migration uygulanacak. Devam edilsin mi?')">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="run_migrations">
+        <button type="submit" class="btn">
+          <i class="fa-solid fa-play"></i> Bekleyen Migration'ları Şimdi Çalıştır (<?= $pending_count ?>)
+        </button>
+      </form>
+    <?php else: ?>
+      <div class="ok" style="margin-top:14px;padding:10px 14px;background:#d1fae5;border-left:4px solid #16a34a;border-radius:6px;color:#065f46;font-size:13px">
+        ✓ Tüm migration'lar uygulanmış durumda.
+      </div>
+    <?php endif; ?>
+  <?php endif; ?>
 </div>
 
 <div class="card">

@@ -288,6 +288,85 @@ function format_date(string $datetime, string $fmt = 'd.m.Y H:i'): string {
     }
 }
 
+/* ================== MIGRATION RUNNER ================== */
+
+/**
+ * DB schema değişikliklerini otomatik uygular.
+ * migrations/ klasöründeki *.sql dosyalarını sıralı çalıştırır.
+ * Her migration sadece bir kez çalışır (_migrations tablosunda izlenir).
+ *
+ * @return array ['applied' => N, 'skipped' => N, 'errors' => [], 'log' => [...]]
+ */
+function run_migrations(): array {
+    $result = ['applied' => 0, 'skipped' => 0, 'errors' => [], 'log' => []];
+    $pdo = db();
+
+    // _migrations tablosu yoksa oluştur
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `_migrations` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(150) NOT NULL UNIQUE,
+            `applied_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `notes` TEXT
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (Throwable $e) {
+        $result['errors'][] = '_migrations tablosu oluşturulamadı: ' . $e->getMessage();
+        return $result;
+    }
+
+    // migrations/ klasörünü tara
+    $dir = __DIR__ . '/../migrations';
+    if (!is_dir($dir)) {
+        $result['log'][] = 'migrations/ klasörü yok, atlanıyor';
+        return $result;
+    }
+
+    $files = array_filter(scandir($dir), function ($f) {
+        return preg_match('/^\d+_.+\.sql$/', $f);
+    });
+    sort($files);
+
+    // Çalıştırılmış migration'ları çek
+    $applied = $pdo->query("SELECT name FROM `_migrations`")->fetchAll(PDO::FETCH_COLUMN);
+    $applied = array_flip($applied);
+
+    foreach ($files as $file) {
+        if (isset($applied[$file])) {
+            $result['skipped']++;
+            $result['log'][] = "✓ $file (zaten uygulanmış)";
+            continue;
+        }
+
+        $sqlPath = $dir . '/' . $file;
+        $sql = file_get_contents($sqlPath);
+        if (!$sql) continue;
+
+        // Yorum satırlarını temizle ve statement'lara böl
+        // Basit splitting (; ile böl, ama transaction güvenli için)
+        $stmts = array_filter(array_map('trim', explode(';', $sql)), function ($s) {
+            return $s && !str_starts_with($s, '--');
+        });
+
+        try {
+            foreach ($stmts as $stmt) {
+                if (trim($stmt) === '') continue;
+                $pdo->exec($stmt);
+            }
+            $pdo->prepare("INSERT INTO `_migrations` (name, notes) VALUES (?, ?)")
+                ->execute([$file, count($stmts) . ' statement uygulandı']);
+            $result['applied']++;
+            $result['log'][] = "✓ $file (yeni uygulandı, " . count($stmts) . " statement)";
+        } catch (Throwable $e) {
+            $err = $file . ': ' . $e->getMessage();
+            $result['errors'][] = $err;
+            $result['log'][] = "✗ $err";
+            // Continue işlemeye devam et, diğerleri çalışsın
+        }
+    }
+
+    return $result;
+}
+
 /* ================== TÜRKÇE KARAKTER NORMALIZE ================== */
 
 /**
