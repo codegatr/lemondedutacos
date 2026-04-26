@@ -191,7 +191,16 @@ function field(string $name, string $label, ?string $value, string $type = 'text
         case 'image':
             echo '<input type="file" name="' . e($name) . '" accept="image/*">';
             if ($value) {
-                echo '<div class="help">Mevcut: <img src="' . e(asset($value)) . '" style="height:50px;vertical-align:middle;border-radius:4px"></div>';
+                if (asset_exists($value)) {
+                    echo '<div class="help">Mevcut: <img src="' . e(asset($value)) . '" style="height:50px;vertical-align:middle;border-radius:4px"> <span style="color:#6b7280;font-size:11px;margin-left:6px">' . e(basename($value)) . '</span></div>';
+                } else {
+                    echo '<div class="help" style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:8px 10px;border-radius:6px;display:flex;align-items:center;gap:8px;margin-top:6px">';
+                    echo '<i class="fa-solid fa-triangle-exclamation"></i>';
+                    echo '<span><strong>Görsel diskte bulunamıyor</strong> &mdash; ';
+                    echo '<code style="font-size:11px">' . e($value) . '</code><br>';
+                    echo '<small>Yeni bir dosya yükleyip kaydedin, mevcut bozuk referans otomatik değişir.</small></span>';
+                    echo '</div>';
+                }
             }
             break;
         case 'bool':

@@ -198,7 +198,16 @@ function upload_file(string $field, string $subdir, array $allowed = ALLOWED_IMG
     }
     $f = $_FILES[$field];
     if ($f['error'] !== UPLOAD_ERR_OK) {
-        flash_set('error', 'Dosya yükleme hatası (kod: ' . $f['error'] . ').');
+        $errors = [
+            UPLOAD_ERR_INI_SIZE   => 'Dosya php.ini upload_max_filesize limitini aşıyor',
+            UPLOAD_ERR_FORM_SIZE  => 'Dosya form MAX_FILE_SIZE limitini aşıyor',
+            UPLOAD_ERR_PARTIAL    => 'Dosya kısmen yüklendi',
+            UPLOAD_ERR_NO_TMP_DIR => 'Geçici klasör yok (sunucu yapılandırma hatası)',
+            UPLOAD_ERR_CANT_WRITE => 'Diske yazılamadı',
+            UPLOAD_ERR_EXTENSION  => 'PHP eklentisi yüklemeyi durdurdu',
+        ];
+        $msg = $errors[$f['error']] ?? "Bilinmeyen hata (kod: {$f['error']})";
+        flash_set('error', "Dosya yükleme hatası: $msg");
         return null;
     }
     if ($f['size'] > MAX_UPLOAD_MB * 1024 * 1024) {
@@ -207,17 +216,24 @@ function upload_file(string $field, string $subdir, array $allowed = ALLOWED_IMG
     }
     $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, $allowed, true)) {
-        flash_set('error', 'Geçersiz dosya türü: .' . $ext);
+        flash_set('error', 'Geçersiz dosya türü: .' . $ext . ' (izinli: ' . implode(', ', $allowed) . ')');
         return null;
     }
     $dir = UPLOAD_DIR . '/' . $subdir;
     if (!is_dir($dir)) {
-        @mkdir($dir, 0755, true);
+        if (!@mkdir($dir, 0755, true)) {
+            flash_set('error', 'Yükleme klasörü oluşturulamadı: ' . $dir . ' (izin sorunu olabilir)');
+            return null;
+        }
+    }
+    if (!is_writable($dir)) {
+        flash_set('error', 'Yükleme klasörü yazılamıyor: ' . $dir . ' (chmod 755 yapın)');
+        return null;
     }
     $name = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
     $dest = $dir . '/' . $name;
     if (!move_uploaded_file($f['tmp_name'], $dest)) {
-        flash_set('error', 'Dosya kaydedilemedi.');
+        flash_set('error', 'Dosya kaydedilemedi (move_uploaded_file başarısız). Hedef: ' . $dest);
         return null;
     }
     @chmod($dest, 0644);

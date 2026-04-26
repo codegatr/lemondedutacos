@@ -197,6 +197,63 @@ foreach ($image_tables as $table => $cols) {
   </p>
 </div>
 
+<?php
+// === Sistem Diagnostik ===
+$root = realpath(__DIR__ . '/..');
+$uploads_dir = $root . '/uploads';
+$uploads_exists = is_dir($uploads_dir);
+$uploads_writable = $uploads_exists && is_writable($uploads_dir);
+$php_max_upload = ini_get('upload_max_filesize');
+$php_max_post = ini_get('post_max_size');
+$php_uploads_on = (bool)ini_get('file_uploads');
+$max_app = MAX_UPLOAD_MB . 'M';
+?>
+<div class="card">
+  <h2 style="font-size:16px"><i class="fa-solid fa-stethoscope"></i> Sistem Diagnostik</h2>
+  <table style="font-size:13px;width:100%;max-width:600px">
+    <tr>
+      <td style="padding:6px 0">PHP <code>file_uploads</code></td>
+      <td>
+        <?php if ($php_uploads_on): ?>
+          <span class="badge b-on">Açık</span>
+        <?php else: ?>
+          <span class="badge b-off">KAPALI</span> (php.ini'den açın)
+        <?php endif; ?>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0"><code>uploads/</code> klasörü</td>
+      <td>
+        <?php if (!$uploads_exists): ?>
+          <span class="badge b-off">YOK</span> (oluşturulması gerekiyor)
+        <?php elseif (!$uploads_writable): ?>
+          <span class="badge b-off">YAZILAMIYOR</span> (chmod 755)
+        <?php else: ?>
+          <span class="badge b-on">Tamam, yazılabilir</span>
+        <?php endif; ?>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0">PHP <code>upload_max_filesize</code></td>
+      <td><strong><?= e($php_max_upload) ?></strong></td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0">PHP <code>post_max_size</code></td>
+      <td><strong><?= e($php_max_post) ?></strong></td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0">Uygulama <code>MAX_UPLOAD_MB</code></td>
+      <td><strong><?= e($max_app) ?></strong></td>
+    </tr>
+  </table>
+  <?php if (!$uploads_writable || !$php_uploads_on): ?>
+    <div style="margin-top:12px;padding:10px 14px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:6px;font-size:13px">
+      <strong style="color:#991b1b">⚠ Yükleme yapılamaz durumda!</strong>
+      Yukarıdaki kırmızı uyarıları çözmeden Admin panelinden görsel yüklenemez.
+    </div>
+  <?php endif; ?>
+</div>
+
 <?php if ($failed): ?>
 <div class="card" style="border-left:4px solid #d97706;background:#fef3c7">
   <h2 style="color:#92400e"><i class="fa-solid fa-triangle-exclamation"></i> Diskte Bulunamayan Dosyalar</h2>
