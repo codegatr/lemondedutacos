@@ -34,17 +34,19 @@ body{overflow:hidden}
 .hero-slide{position:absolute;inset:0;opacity:0;transition:opacity .8s}
 .hero-slide.active{opacity:1}
 .hero-slide picture,.hero-slide img{width:100%;height:100%;display:block;object-fit:cover}
-.hero-nav{position:absolute;inset:0;pointer-events:none}
-.hero-arrow{position:absolute;top:50%;transform:translateY(-50%);width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);border:0;cursor:pointer;pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink);box-shadow:var(--shadow);transition:.2s}
-.hero-arrow:hover{background:#fff}
+.hero-nav{position:absolute;inset:0;pointer-events:none;z-index:4}
+.hero-arrow{position:absolute;top:50%;transform:translateY(-50%);width:54px;height:54px;border-radius:999px;background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.20);color:#fff;cursor:pointer;pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 10px 26px rgba(0,0,0,.28);transition:transform .22s,background .22s,box-shadow .22s}
+.hero-arrow:hover{background:rgba(0,0,0,.52);transform:translateY(-50%) scale(1.06);box-shadow:0 14px 32px rgba(0,0,0,.38)}
 .hero-arrow.prev{left:20px}
 .hero-arrow.next{right:20px}
-.strip{position:absolute;bottom:0;left:0;right:0;padding:18px 16px;background:linear-gradient(180deg,rgba(115,139,128,.03),#0f3f2f)}
-.strip-inner{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-width:var(--max);margin:0 auto;padding:0 8px}
-.icon-card{display:flex;flex-direction:column;align-items:center;gap:8px}
-.icon-btn{width:clamp(80px,11vw,120px);height:clamp(80px,11vw,120px);border-radius:50%;border:2px solid rgba(255,255,255,.95);background:transparent;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;cursor:pointer}
-.icon-btn img{width:92%;height:92%;object-fit:contain}
-.icon-label{font-size:11px;font-weight:700;color:#fff;letter-spacing:.4px;text-align:center;line-height:1.2}
+.strip{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(178,69,69,.05),rgba(139,45,45,.904));padding:26px 16px 18px;z-index:3;overflow:hidden}
+.strip-inner{max-width:var(--max);margin:0 auto;display:flex;align-items:flex-start;justify-content:center;gap:34px;flex-wrap:wrap;padding-bottom:4px}
+.icon-card{width:140px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;user-select:none;position:relative}
+.icon-btn{width:145px;height:145px;display:grid;place-items:center;background:transparent;border:2px solid rgba(255,255,255,.95);border-radius:50%;cursor:pointer;position:relative;transition:transform .22s,background .22s,border-color .22s;overflow:hidden;padding:0}
+.icon-btn:hover{transform:translateY(-2px)}
+.icon-card:hover .icon-btn{transform:translateY(-4px) scale(1.10)}
+.icon-btn img{position:absolute;top:50%;left:50%;width:120%;height:120%;object-fit:contain;transform:translate(-50%,-50%);display:block}
+.icon-label{min-height:34px;font-weight:800;letter-spacing:.6px;font-size:12px;color:#fff;text-transform:uppercase;text-shadow:0 2px 10px rgba(0,0,0,.35);line-height:1.2;text-align:center}
 .fixmenu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
 .fixmenu-overlay.active{display:flex}
 .fixmenu-panel{background:#fff;border-radius:18px;padding:24px;max-width:1000px;width:100%;max-height:92vh;overflow:hidden;box-shadow:var(--shadow)}
@@ -57,9 +59,12 @@ body{overflow:hidden}
   body{overflow:auto}
   .hero{height:auto}
   .hero-slider{height:60vh;min-height:380px}
-  .hero-arrow{width:42px;height:42px}
-  .strip{position:static;padding:14px 8px}
+  .hero-arrow{width:42px;height:42px;font-size:14px}
+  .strip{position:static;padding:20px 8px 16px}
+  .strip-inner{gap:18px}
+  .icon-card{width:auto}
   .icon-btn{width:clamp(72px,20vw,108px);height:clamp(72px,20vw,108px)}
+  .icon-label{font-size:11px}
   .fixmenu-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
   .fix-item img{height:180px}
   .fix-caption{padding:10px;font-size:11px}

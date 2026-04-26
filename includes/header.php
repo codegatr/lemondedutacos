@@ -52,8 +52,17 @@ button{font:inherit}
 .hamburger span:after{position:absolute;top:7px}
 .footer{padding:18px 24px;background:#fff;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;font-size:12px;gap:12px;flex-wrap:wrap}
 .social-nav{list-style:none;margin:0;padding:0;display:flex;gap:8px}
-.social-nav a{display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:8px;background:#f3f4f6;color:var(--ink);transition:.2s}
-.social-nav a:hover{background:var(--brand);color:#fff}
+.social-nav li{display:inline-block}
+.model-2 a{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:10px;color:#fff;font-size:18px;overflow:hidden;text-decoration:none;transition:.2s}
+.model-2 a:hover{background:#fff !important;text-shadow:0 0 #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5,5px 5px #d5d5d5,6px 6px #d5d5d5,7px 7px #d5d5d5}
+.model-2 .facebook{background:#3B579D}
+.model-2 .facebook:hover{color:#3B579D}
+.model-2 .instagram{background:#E1306C}
+.model-2 .instagram:hover{color:#E1306C}
+.model-2 .twitter{background:#111827}
+.model-2 .twitter:hover{color:#111827}
+.model-2 .youtube{background:#FF0000}
+.model-2 .youtube:hover{color:#FF0000}
 .flash{padding:12px 16px;border-radius:8px;margin:14px auto;max-width:900px;font-size:14px;font-weight:500}
 .flash-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
 .flash-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}

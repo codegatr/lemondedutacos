@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,21 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.3",
+            "date": "2026-04-26",
+            "notes": [
+                "Anasayfa: strip arka planı kırmızı gradyana çevrildi (orijinaliyle uyumlu)",
+                "Anasayfa: ikon boyutu 145x145 + gap 34px (orijinaliyle birebir)",
+                "Footer: 4 sosyal medya ikonu her zaman görünür (Facebook mavi, Instagram pembe, Twitter siyah, YouTube kırmızı)",
+                "Footer: model-2 hover efekti (3D shadow geçişi)",
+                "admin/update.php: ERP-stili güncelleme akışı",
+                "  - Inline progress bar (5 aşamalı animasyon)",
+                "  - PRG pattern: güncelleme sonrası yeşil başarı ekranı",
+                "  - SVG dairesel animasyon + tick işareti",
+                "  - Sürüm yükseltme bilgisi + Pano/Site linkleri"
+            ]
+        },
         {
             "version": "1.0.2",
             "date": "2026-04-26",

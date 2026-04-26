@@ -11,7 +11,7 @@ if ($cu['role'] !== 'superadmin') {
 
 $pdo = db();
 
-// GitHub'dan en son sürüm
+/* GitHub'dan en son sürüm bilgisi */
 function fetch_latest_release(): array
 {
     $url = "https://api.github.com/repos/" . GITHUB_OWNER . "/" . GITHUB_REPO . "/releases/latest";
@@ -34,21 +34,20 @@ function ver_compare(string $a, string $b): int
     return version_compare(ltrim($a, 'v'), ltrim($b, 'v'));
 }
 
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
+$action = $_POST['action'] ?? '';
 $current_ver = APP_VERSION;
 $latest = null;
 $check_error = null;
 
-if ($action === '') {
-    $r = fetch_latest_release();
-    if (isset($r['error'])) {
-        $check_error = $r['error'];
-    } else {
-        $latest = $r;
-    }
+/* Sürüm bilgisi (her zaman çek) */
+$r = fetch_latest_release();
+if (isset($r['error'])) {
+    $check_error = $r['error'];
+} else {
+    $latest = $r;
 }
 
-// Güncelleme uygula
+/* GÜNCELLEME UYGULA */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
     csrf_required();
 
@@ -61,28 +60,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
 
     try {
         $log[] = "Sürüm bilgisi alınıyor...";
-        $r = fetch_latest_release();
-        if (isset($r['error'])) throw new RuntimeException($r['error']);
-        $newVer = ltrim($r['tag_name'], 'v');
+        if (!$latest) throw new RuntimeException($check_error ?: 'Sürüm bilgisi alınamadı.');
+        $newVer = ltrim($latest['tag_name'], 'v');
 
         if (ver_compare($newVer, $current_ver) <= 0) {
             throw new RuntimeException("Zaten en güncel sürümdesiniz ($current_ver).");
         }
 
-        // history kaydı oluştur (başlangıçta failed olarak; başarılı olursa update edilecek)
+        // History kaydı oluştur (failed default; başarılı olursa update edilecek)
         $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
             ->execute([$current_ver, $newVer, 'failed', "Başlatıldı...", $cu['id']]);
         $hist_id = (int)$pdo->lastInsertId();
 
-        // ZIP URL'ini bul (release assets içinde .zip ara, yoksa zipball_url)
+        // ZIP URL'ini bul
         $zipUrl = null;
-        foreach (($r['assets'] ?? []) as $a) {
+        foreach (($latest['assets'] ?? []) as $a) {
             if (str_ends_with(strtolower($a['name'] ?? ''), '.zip')) {
                 $zipUrl = $a['browser_download_url'];
                 break;
             }
         }
-        if (!$zipUrl) $zipUrl = $r['zipball_url'];
+        if (!$zipUrl) $zipUrl = $latest['zipball_url'];
 
         $log[] = "İndiriliyor: " . parse_url($zipUrl, PHP_URL_PATH);
 
@@ -156,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         // version.txt güncelle
         @file_put_contents(__DIR__ . '/../version.txt', $newVer);
 
-        // config.php içindeki APP_VERSION güncelle
+        // config.php içindeki APP_VERSION güncelle (whitespace toleranslı)
         $cfgPath = __DIR__ . '/../includes/config.php';
         $cfg = @file_get_contents($cfgPath);
         if ($cfg !== false) {
@@ -169,88 +167,208 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
             ->execute(['success', implode("\n", $log), $hist_id]);
         log_activity('system_updated', null, "v$current_ver → v$newVer");
-        flash_set('success', "Güncelleme tamamlandı: v$current_ver → v$newVer ($duration sn)");
+
+        // PRG: yenilenen sayfada başarı ekranını göstermek için redirect
+        header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration);
+        exit;
     } catch (Throwable $ex) {
         if ($hist_id) {
             $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
                 ->execute(['failed', implode("\n", $log) . "\nHATA: " . $ex->getMessage(), $hist_id]);
         }
         flash_set('error', 'Güncelleme başarısız: ' . $ex->getMessage());
+        header('Location: update.php'); exit;
     }
-
-    header('Location: update.php'); exit;
 }
 
+/* Başarı ekranı (PRG sonrası) */
+$show_success  = !empty($_GET['completed']);
+$success_from  = $_GET['from'] ?? '';
+$success_to    = $_GET['to']   ?? '';
+$success_dur   = $_GET['dur']  ?? '0';
+
 $history = $pdo->query("SELECT * FROM update_history ORDER BY id DESC LIMIT 10")->fetchAll();
+$has_update = $latest && ver_compare(ltrim($latest['tag_name'], 'v'), $current_ver) > 0;
 ?>
 
+<?php if ($show_success): ?>
+<div class="card" style="text-align:center;padding:40px 32px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(34,197,94,.15),transparent 60%);pointer-events:none"></div>
+  <div style="position:relative;z-index:1">
+    <div style="width:104px;height:104px;margin:0 auto 18px;position:relative">
+      <svg viewBox="0 0 100 100" style="width:104px;height:104px">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="#a7f3d0" stroke-width="6"/>
+        <circle id="success-circle" cx="50" cy="50" r="44" fill="none" stroke="#16a34a" stroke-width="6"
+                stroke-dasharray="276" stroke-dashoffset="276" stroke-linecap="round"
+                style="transition:stroke-dashoffset 1.2s ease;transform:rotate(-90deg);transform-origin:50% 50%"/>
+      </svg>
+      <div id="success-tick" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:#16a34a;opacity:0;transform:scale(.5);transition:.4s">
+        <i class="fa-solid fa-check"></i>
+      </div>
+    </div>
+    <h2 style="font-size:26px;color:#16a34a;margin:0 0 8px;font-weight:800">Güncelleme Tamamlandı!</h2>
+    <p style="color:#065f46;font-size:15px;margin:0 0 4px">
+      <strong>v<?= e($success_from) ?></strong> → <strong>v<?= e($success_to) ?></strong> sürümüne yükseltildi
+    </p>
+    <p style="color:#047857;font-size:13px;margin:0 0 22px">İşlem süresi: <?= e($success_dur) ?> saniye</p>
+
+    <div style="display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <a href="update.php" class="btn">Güncelleme Sayfası</a>
+      <a href="index.php" class="btn btn-secondary">Pano</a>
+      <a href="/" target="_blank" class="btn btn-line">Siteyi Aç <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+    </div>
+  </div>
+</div>
+
+<script>
+// Animasyon: dairenin dolması + tick'in fade-in
+setTimeout(()=>{
+  const c=document.getElementById('success-circle');
+  if(c) c.style.strokeDashoffset='0';
+},150);
+setTimeout(()=>{
+  const t=document.getElementById('success-tick');
+  if(t){t.style.opacity='1';t.style.transform='scale(1)'}
+},800);
+</script>
+<?php endif; ?>
+
+<?php /* Sürüm bilgisi kartları */ ?>
 <div class="grid-2">
-  <div class="metric"><div class="lbl">Mevcut Sürüm</div><div class="val">v<?= e($current_ver) ?></div><div class="delta">Yerel</div></div>
+  <div class="metric">
+    <div class="lbl">Mevcut Sürüm</div>
+    <div class="val">v<?= e($current_ver) ?></div>
+    <div class="delta">Sunucudaki yerel sürüm</div>
+  </div>
   <?php if ($latest): ?>
-    <?php $up = ver_compare(ltrim($latest['tag_name'], 'v'), $current_ver) > 0; ?>
     <div class="metric">
-      <div class="lbl">Sunucu Sürümü</div>
-      <div class="val" style="color:<?= $up ? '#d97706' : '#3A5F0B' ?>"><?= e($latest['tag_name']) ?></div>
-      <div class="delta"><?= $up ? '⚠ Güncelleme mevcut' : '✓ Güncelsiniz' ?></div>
+      <div class="lbl">GitHub'da Mevcut Sürüm</div>
+      <div class="val" style="color:<?= $has_update ? '#d97706' : '#16a34a' ?>"><?= e($latest['tag_name']) ?></div>
+      <div class="delta"><?= $has_update ? '⚠ Yeni sürüm mevcut' : '✓ Sisteminiz güncel' ?></div>
     </div>
   <?php else: ?>
-    <div class="metric"><div class="lbl">Sunucu Sürümü</div><div class="val" style="color:#dc2626;font-size:14px">Erişilemedi</div><div class="delta"><?= e($check_error ?? '') ?></div></div>
+    <div class="metric">
+      <div class="lbl">GitHub Bağlantısı</div>
+      <div class="val" style="color:#dc2626;font-size:14px;line-height:1.3">Erişilemedi</div>
+      <div class="delta"><?= e($check_error ?? '') ?></div>
+    </div>
   <?php endif; ?>
 </div>
 
-<div class="card" style="margin-top:18px">
-  <h2>GitHub Repo Bilgisi</h2>
-  <p><strong>Owner:</strong> <code><?= e(GITHUB_OWNER) ?></code></p>
-  <p><strong>Repo:</strong> <code><?= e(GITHUB_REPO) ?></code></p>
-  <p><strong>Token:</strong> <?= GITHUB_TOKEN ? 'Ayarlanmış (private repo)' : 'Yok (public repo)' ?></p>
-  <p style="font-size:12px;color:#6b7280;margin-top:8px">
-    Repo URL: <a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?></a>
-  </p>
+<?php if ($has_update): ?>
+<div class="card" style="margin-top:18px;border:2px solid #fde68a">
+  <h2 style="color:#d97706;display:flex;align-items:center;gap:10px">
+    <i class="fa-solid fa-cloud-arrow-down"></i>
+    Güncellemeyi Uygula
+  </h2>
+
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:13px">
+    <div><strong>Sürüm:</strong> <?= e($latest['tag_name']) ?></div>
+    <div><strong>Yayın:</strong> <?= format_date($latest['published_at'], 'd.m.Y H:i') ?></div>
+    <?php if (!empty($latest['author']['login'])): ?>
+      <div><strong>Yayınlayan:</strong> <?= e($latest['author']['login']) ?></div>
+    <?php endif; ?>
+  </div>
+
+  <?php if (!empty($latest['body'])): ?>
+    <details style="margin-bottom:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0">
+      <summary style="cursor:pointer;font-weight:700;color:#92400e;padding:10px 14px;font-size:13px">📋 Sürüm Notları</summary>
+      <pre style="background:#fff;padding:14px;font-size:12px;line-height:1.6;overflow:auto;margin:0;border-top:1px solid #fde68a;white-space:pre-wrap"><?= e($latest['body']) ?></pre>
+    </details>
+  <?php endif; ?>
+
+  <div class="flash flash-warning" style="margin-bottom:16px">
+    <strong>⚠ Önemli:</strong>
+    <ul style="margin:6px 0 0 18px;font-size:12.5px;line-height:1.7">
+      <li>Güncelleme sırasında <code>uploads/</code>, <code>includes/config.php</code> ve <code>install.lock</code> korunur</li>
+      <li>İşlem 10-30 saniye sürebilir, lütfen sayfayı kapatmayın</li>
+      <li>Önemli verileriniz için yedek almanız önerilir</li>
+    </ul>
+  </div>
+
+  <form method="post" id="update-form" onsubmit="return startUpdate(this)">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="apply">
+    <button type="submit" id="update-btn" class="btn btn-warn" style="font-size:15px;padding:12px 24px">
+      <i class="fa-solid fa-cloud-arrow-down"></i> Güncellemeyi Şimdi Başlat
+    </button>
+
+    <div id="update-progress" style="display:none;margin-top:18px">
+      <div style="height:6px;background:#fef3c7;border-radius:99px;overflow:hidden;max-width:560px">
+        <div id="update-bar" style="height:6px;width:0;background:linear-gradient(90deg,#f59e0b,#16a34a);border-radius:99px;transition:width 8s linear"></div>
+      </div>
+      <div id="update-msg" style="font-size:13px;color:#374151;margin-top:10px;font-weight:600;display:flex;align-items:center;gap:8px">
+        <span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>
+        <span id="update-msg-text">Hazırlanıyor...</span>
+      </div>
+    </div>
+  </form>
 </div>
 
-<?php if ($latest && ver_compare(ltrim($latest['tag_name'], 'v'), $current_ver) > 0): ?>
-  <div class="card">
-    <h2>Güncellemeyi Uygula</h2>
-    <p style="margin-bottom:10px"><strong>Yeni Sürüm:</strong> <?= e($latest['tag_name']) ?> &middot; <strong>Yayın:</strong> <?= e($latest['published_at']) ?></p>
-    <?php if (!empty($latest['body'])): ?>
-      <details style="margin-bottom:14px">
-        <summary style="cursor:pointer;font-weight:600">Sürüm Notları</summary>
-        <pre style="background:#f9fafb;padding:12px;border-radius:6px;font-size:12px;line-height:1.5;overflow:auto;margin-top:8px"><?= e($latest['body']) ?></pre>
-      </details>
-    <?php endif; ?>
-    <div class="flash flash-warning">
-      <strong>Önemli:</strong> Güncelleme sırasında <code>uploads/</code>, <code>includes/config.php</code> ve <code>install.lock</code> dosyaları korunur. Yine de güncellemeden önce yedek almanız önerilir.
-    </div>
-    <form method="post" data-confirm="Güncellemeyi başlatmak istediğinize emin misiniz? İşlem sırasında site geçici olarak yavaşlayabilir.">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="apply">
-      <button type="submit" class="btn btn-warn"><i class="fa-solid fa-cloud-arrow-down"></i> Güncellemeyi Şimdi Başlat</button>
-    </form>
-  </div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+function startUpdate(form) {
+  if (!confirm('Güncellemeyi başlatmak üzeresiniz. Devam edilsin mi?\n\nİşlem 10-30 saniye sürebilir, sayfayı kapatmayın.')) return false;
+
+  const btn = document.getElementById('update-btn');
+  btn.disabled = true;
+  document.getElementById('update-progress').style.display = 'block';
+
+  // Bar 8 saniyede %95'e gider, sunucu cevabı dönünce yenilenmiş sayfa zaten %100 yeşil banner gösterir
+  setTimeout(() => { document.getElementById('update-bar').style.width = '95%'; }, 80);
+
+  const stages = [
+    [0,    '🔗 GitHub API\'ye bağlanılıyor...'],
+    [1500, '📦 ZIP paketi indiriliyor...'],
+    [3500, '📂 Dosyalar açılıp kopyalanıyor...'],
+    [6000, '🔧 Sürüm bilgileri güncelleniyor...'],
+    [7500, '✅ Tamamlanıyor...'],
+  ];
+  const txt = document.getElementById('update-msg-text');
+  stages.forEach(([t, m]) => setTimeout(() => { txt.textContent = m; }, t));
+
+  return true;
+}
+</script>
 <?php endif; ?>
 
+<?php /* GitHub repo bilgisi */ ?>
 <div class="card">
-  <h2>Geçmiş Güncellemeler</h2>
+  <h2><i class="fa-brands fa-github"></i> GitHub Repo</h2>
+  <table>
+    <tr><th style="width:160px">Owner</th><td><code><?= e(GITHUB_OWNER) ?></code></td></tr>
+    <tr><th>Repo</th><td><code><?= e(GITHUB_REPO) ?></code></td></tr>
+    <tr><th>Token</th><td><?= GITHUB_TOKEN ? '<span class="badge b-on">Tanımlı</span> (private repo desteği aktif)' : '<span class="badge b-info">Yok</span> (public repo)' ?></td></tr>
+    <tr><th>Repo URL</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?></a></td></tr>
+    <tr><th>Releases</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">Tüm sürümleri gör →</a></td></tr>
+  </table>
+</div>
+
+<?php /* Geçmiş güncellemeler */ ?>
+<div class="card">
+  <h2><i class="fa-solid fa-clock-rotate-left"></i> Güncelleme Geçmişi</h2>
   <?php if (!$history): ?>
     <div class="empty">Henüz güncelleme yapılmadı.</div>
   <?php else: ?>
     <table>
-      <thead><tr><th>#</th><th>Tarih</th><th>Sürüm</th><th>Durum</th><th>Notlar / Log</th></tr></thead>
+      <thead><tr><th>#</th><th>Tarih</th><th>Sürüm</th><th>Durum</th><th>Detay</th></tr></thead>
       <tbody>
       <?php foreach ($history as $h): ?>
         <tr>
           <td><?= (int)$h['id'] ?></td>
-          <td><?= format_date($h['created_at']) ?></td>
-          <td><?= e($h['from_version']) ?> → <?= e($h['to_version']) ?></td>
+          <td style="font-size:11px"><?= format_date($h['created_at']) ?></td>
+          <td><strong>v<?= e($h['from_version']) ?></strong> → <strong>v<?= e($h['to_version']) ?></strong></td>
           <td>
             <span class="badge <?= $h['status']==='success'?'b-on':'b-off' ?>">
-              <?= e($h['status']) ?>
+              <?= $h['status']==='success' ? '✓ Başarılı' : '✗ Başarısız' ?>
             </span>
           </td>
           <td>
             <?php if (!empty($h['notes'])): ?>
-              <details><summary style="cursor:pointer;font-size:11px;color:#3A5F0B">Görüntüle</summary>
-                <pre style="background:#f9fafb;padding:8px;font-size:10px;border-radius:4px;margin-top:4px;max-width:400px;overflow:auto"><?= e($h['notes']) ?></pre>
+              <details>
+                <summary style="cursor:pointer;font-size:11px;color:#3A5F0B;font-weight:600">Logu görüntüle</summary>
+                <pre style="background:#f9fafb;padding:10px;font-size:10.5px;line-height:1.6;border-radius:6px;margin-top:6px;max-height:280px;overflow:auto;white-space:pre-wrap"><?= e($h['notes']) ?></pre>
               </details>
             <?php else: ?>—<?php endif; ?>
           </td>
