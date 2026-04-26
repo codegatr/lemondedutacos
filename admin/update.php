@@ -1,686 +1,734 @@
 <?php
+/**
+ * admin/update.php — Güncelleme Merkezi v5
+ * CodeGa ERP'deki güncelleme merkezinin LMD Tacos uyarlaması.
+ */
 declare(strict_types=1);
+$page_h = 'Güncelleme Merkezi';
+
+@set_time_limit(0);
+@ini_set('max_execution_time', '0');
+@ini_set('memory_limit', '512M');
+@ignore_user_abort(true);
 
 require_once __DIR__ . '/../includes/functions.php';
 admin_require();
 
 $cu = admin_user();
-if ($cu['role'] !== 'superadmin') {
-    flash_set('error', 'Bu sayfaya yalnızca süper yöneticiler erişebilir.');
-    header('Location: index.php'); exit;
-}
-
 $pdo = db();
 
-/* GitHub'dan en son sürüm bilgisi */
-function fetch_latest_release(): array
-{
-    $url = "https://api.github.com/repos/" . GITHUB_OWNER . "/" . GITHUB_REPO . "/releases/latest";
-    $headers = ["User-Agent: lemondedutacos-updater", "Accept: application/vnd.github+json"];
-    if (GITHUB_TOKEN !== '') {
-        $headers[] = "Authorization: Bearer " . GITHUB_TOKEN;
+define('GH_REPO',   GITHUB_OWNER . '/' . GITHUB_REPO);
+define('GH_BRANCH', defined('GITHUB_BRANCH') ? GITHUB_BRANCH : 'main');
+define('SITE_ROOT', realpath(__DIR__ . '/..'));
+define('BK_DIR',    SITE_ROOT . '/uploads/backups');
+define('TOK_FILE',  __DIR__ . '/.gh_token');
+define('VER_FILE',  SITE_ROOT . '/version.txt');
+define('MANIFEST',  SITE_ROOT . '/manifest.json');
+define('MAX_BK',    10);
+define('UPD_EXCLUDES', [
+    'includes/config.php', '.htaccess', '.gitignore',
+    'uploads/', 'cache/', 'sessions/',
+    'admin/.gh_token',
+    '.git/', 'node_modules/', 'vendor/',
+    'install.lock', 'install.php',
+    '.env', '.env.example',
+    'static/img/yeni/',
+    'diagnostic.php', 'fix-it.php', 'fix-it2.php', 'rename-files.php', 'updater.php',
+]);
+
+if (!is_dir(BK_DIR)) @mkdir(BK_DIR, 0755, true);
+$htaccess = BK_DIR . '/.htaccess';
+if (!file_exists($htaccess)) @file_put_contents($htaccess, "Order deny,allow\nDeny from all\n");
+
+function upd_getTok(): string {
+    if (file_exists(TOK_FILE)) return trim(preg_replace('/[^a-zA-Z0-9_\-]/', '', file_get_contents(TOK_FILE)));
+    return defined('GITHUB_TOKEN') ? GITHUB_TOKEN : '';
+}
+
+function upd_curl(string $url, array $hdrs = [], int $to = 30): array {
+    // cURL varsa kullan
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => $to,
+            CURLOPT_HTTPHEADER => $hdrs, CURLOPT_USERAGENT => 'LMDT-Updater/5.0', CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $body = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+        return ['code' => $code, 'body' => $body];
     }
-    $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$headers),'timeout'=>15,'ignore_errors'=>true]]);
+    // Fallback: file_get_contents (allow_url_fopen açık olmalı)
+    if (!ini_get('allow_url_fopen')) {
+        return ['code' => 0, 'body' => 'cURL ve allow_url_fopen ikisi de kapalı'];
+    }
+    $hdrs[] = 'User-Agent: LMDT-Updater/5.0';
+    $ctx = stream_context_create(['http' => [
+        'method' => 'GET',
+        'header' => implode("\r\n", $hdrs),
+        'timeout' => $to,
+        'ignore_errors' => true,
+    ]]);
     $body = @file_get_contents($url, false, $ctx);
-    if ($body === false) return ['error' => 'GitHub API erişilemedi.'];
-    $data = json_decode($body, true);
-    if (!is_array($data) || !isset($data['tag_name'])) {
-        return ['error' => 'API yanıtı geçersiz: ' . ($data['message'] ?? 'bilinmiyor')];
+    $code = 0;
+    if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+        $code = (int)$m[1];
     }
-    return $data;
+    return ['code' => $code, 'body' => $body !== false ? $body : ''];
 }
 
-function ver_compare(string $a, string $b): int
-{
-    return version_compare(ltrim($a, 'v'), ltrim($b, 'v'));
+function upd_ghAPI(string $path, string $tok): ?array {
+    $r = upd_curl('https://api.github.com/repos/' . GH_REPO . $path,
+        ['Authorization: token ' . $tok, 'Accept: application/vnd.github+json', 'X-GitHub-Api-Version: 2022-11-28']);
+    if ($r['code'] !== 200) return null;
+    return json_decode($r['body'], true);
 }
 
-/* === ÖNEMLİ: TÜM POST İŞLEMLERİ HTML ÇIKTISINDAN ÖNCE === */
-/* _header.php require'ı bu bloktan SONRA olmak zorunda; yoksa header('Location:') sessizce ölür. */
+function upd_ghDownload(string $file, string $tok): ?string {
+    $d = upd_ghAPI('/contents/' . str_replace('%2F','/',rawurlencode($file)) . '?ref=' . GH_BRANCH, $tok);
+    if ($d && !empty($d['content'])) return base64_decode(str_replace(["\n","\r"],'',$d['content']));
+    $r = upd_curl('https://raw.githubusercontent.com/' . GH_REPO . '/' . GH_BRANCH . '/' . $file,
+        ['Authorization: token ' . $tok], 60);
+    if ($r['code'] === 200 && $r['body']) return $r['body'];
+    return null;
+}
 
-$action = $_POST['action'] ?? '';
-$current_ver = APP_VERSION;
-
-/* === MIGRATION'LARI MANUEL ÇALIŞTIR === */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'run_migrations') {
-    csrf_required();
-    $migResult = run_migrations();
-    if ($migResult['errors']) {
-        flash_set('error', 'Migration tamamlandı ama hatalar var: ' . implode(' | ', $migResult['errors']));
-    } elseif ($migResult['applied'] > 0) {
-        flash_set('success', "{$migResult['applied']} migration uygulandı, {$migResult['skipped']} zaten uygulanmıştı.");
-    } else {
-        flash_set('info', "Tüm migration'lar zaten güncel ({$migResult['skipped']} kayıt).");
+function upd_isExcluded(string $path): bool {
+    foreach (UPD_EXCLUDES as $ex) {
+        if ($path === $ex) return true;
+        if (str_ends_with($ex, '/') && str_starts_with($path, $ex)) return true;
     }
-    header('Location: update.php'); exit;
+    return false;
 }
 
+function upd_repoTree(string $tok): array {
+    $tree = upd_ghAPI('/git/trees/' . GH_BRANCH . '?recursive=1', $tok);
+    if (!$tree || empty($tree['tree'])) return [];
+    $out = [];
+    foreach ($tree['tree'] as $i) {
+        if ($i['type'] !== 'blob') continue;
+        if (!upd_isExcluded($i['path'])) $out[] = ['path'=>$i['path'], 'sha'=>$i['sha'], 'size'=>$i['size']??0];
+    }
+    usort($out, fn($a,$b) => strcmp($a['path'], $b['path']));
+    return $out;
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'manual_apply') {
-    csrf_required();
-    @set_time_limit(300);
-    @ini_set('memory_limit', '256M');
+function upd_blobSHA(string $c): string { return sha1('blob ' . strlen($c) . "\0" . $c); }
 
-    $err = null;
-    $log = [];
-    $hist_id = null;
+function upd_localVer(): string {
+    if (file_exists(MANIFEST)) {
+        $m = json_decode(file_get_contents(MANIFEST), true);
+        if (!empty($m['version'])) return $m['version'];
+    }
+    if (file_exists(VER_FILE)) return trim(file_get_contents(VER_FILE));
+    return defined('APP_VERSION') ? APP_VERSION : '?';
+}
 
+function upd_ghVer(string $tok): string {
+    $d = upd_ghAPI('/contents/manifest.json?ref=' . GH_BRANCH, $tok);
+    if ($d && !empty($d['content'])) {
+        $m = json_decode(base64_decode(str_replace(["\n","\r"],'',$d['content'])), true);
+        if (!empty($m['version'])) return $m['version'];
+    }
+    $d = upd_ghAPI('/contents/version.txt?ref=' . GH_BRANCH, $tok);
+    if ($d && !empty($d['content'])) return trim(base64_decode(str_replace(["\n","\r"],'',$d['content'])));
+    return '?';
+}
+
+function upd_backup(string $label = ''): array {
+    if (!class_exists('ZipArchive')) return ['ok'=>false,'error'=>'ZipArchive yok'];
+    $tag  = $label ? '_' . preg_replace('/[^a-z0-9]/i','',$label) : '';
+    $name = 'bk_' . date('Ymd_His') . $tag . '_v' . upd_localVer() . '.zip';
+    $path = BK_DIR . '/' . $name;
+    $zip = new ZipArchive();
+    if ($zip->open($path, ZipArchive::CREATE) !== true) return ['ok'=>false,'error'=>'ZIP açılamadı'];
+    $kritik = ['admin', 'includes', 'migrations'];
+    $it = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(SITE_ROOT, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+    $cnt = 0;
+    foreach ($it as $f) {
+        if ($f->isDir()) continue;
+        $rel = str_replace(SITE_ROOT . '/', '', $f->getPathname());
+        if (upd_isExcluded($rel)) continue;
+        $seg = explode('/', $rel)[0];
+        if (strpos($rel, '/') !== false && !in_array($seg, $kritik, true)) continue;
+        if ($f->getSize() > 10 * 1024 * 1024) continue;
+        $zip->addFile($f->getPathname(), $rel);
+        $cnt++;
+        if ($cnt > 2000) break;
+    }
+    $zip->close();
+    $bks = glob(BK_DIR . '/bk_*.zip') ?: [];
+    usort($bks, fn($a,$b) => filemtime($a) <=> filemtime($b));
+    foreach (array_slice($bks, 0, max(0, count($bks) - MAX_BK)) as $old) @unlink($old);
+    return ['ok'=>true, 'name'=>$name, 'size'=>filesize($path), 'files'=>$cnt];
+}
+
+function upd_runMigrations(): array {
+    $log = []; global $pdo;
+    $migDir = SITE_ROOT . '/migrations';
+    if (!is_dir($migDir)) return ['ok'=>true, 'log'=>['ℹ️ migrations/ klasörü yok'], 'new'=>0];
     try {
-        if (empty($_FILES['zipfile']['name']) || $_FILES['zipfile']['error'] !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('ZIP dosyası seçilmedi veya yüklenemedi (kod: ' . ($_FILES['zipfile']['error'] ?? 'bilinmiyor') . ')');
-        }
-        $tmpZip = $_FILES['zipfile']['tmp_name'];
-        if (!str_ends_with(strtolower($_FILES['zipfile']['name']), '.zip')) {
-            throw new RuntimeException('Sadece .zip dosyası kabul edilir.');
-        }
-
-        $log[] = "ZIP yüklendi: " . round($_FILES['zipfile']['size']/1024, 1) . " KB";
-
-        // History kaydı
-        $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
-            ->execute([$current_ver, 'manuel', 'failed', "Manuel ZIP başlatıldı...", $cu['id']]);
-        $hist_id = (int)$pdo->lastInsertId();
-
-        // Çıkar
-        $tmpDir = sys_get_temp_dir() . "/lmdt_man_" . bin2hex(random_bytes(4));
-        @mkdir($tmpDir, 0755, true);
-        $zip = new ZipArchive();
-        if ($zip->open($tmpZip) !== true) throw new RuntimeException("ZIP açılamadı (geçersiz format).");
-        $zip->extractTo($tmpDir);
-        $zip->close();
-
-        $contents = array_values(array_diff(scandir($tmpDir), ['.', '..']));
-        $extractRoot = $tmpDir;
-        if (count($contents) === 1 && is_dir($tmpDir . '/' . $contents[0])) {
-            $extractRoot = $tmpDir . '/' . $contents[0];
-        }
-
-        // version.txt veya manifest.json'dan yeni sürümü oku
-        $newVer = 'manuel';
-        if (file_exists($extractRoot . '/version.txt')) {
-            $newVer = trim(file_get_contents($extractRoot . '/version.txt'));
-        } elseif (file_exists($extractRoot . '/manifest.json')) {
-            $mf = json_decode(file_get_contents($extractRoot . '/manifest.json'), true);
-            $newVer = $mf['version'] ?? 'manuel';
-        }
-
-        $protect = ['uploads', 'install.lock', 'includes/config.php'];
-        $rootDir = realpath(__DIR__ . '/..');
-
-        // Recursive copy
-        $copy = function($src, $dst) use (&$copy, $protect, $rootDir) {
-            if (!is_dir($src)) {
-                $rel = ltrim(str_replace($rootDir, '', $dst), '/');
-                foreach ($protect as $p) if (str_starts_with($rel, $p)) return;
-                @copy($src, $dst);
-                return;
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `_migrations` (
+            `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(150) NOT NULL UNIQUE,
+            `applied_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $applied = array_flip($pdo->query("SELECT name FROM _migrations")->fetchAll(PDO::FETCH_COLUMN));
+        $files = array_filter(scandir($migDir), fn($f) => preg_match('/^\d+_.+\.sql$/', $f));
+        sort($files);
+        $ok = 0; $skip = 0; $fail = 0;
+        foreach ($files as $mf) {
+            if (isset($applied[$mf])) { $skip++; continue; }
+            $sql = file_get_contents("$migDir/$mf");
+            $stmts = array_filter(array_map('trim', explode(';', $sql)), fn($s) => $s && !str_starts_with($s, '--'));
+            try {
+                foreach ($stmts as $s) if (trim($s)) $pdo->exec($s);
+                $pdo->prepare("INSERT INTO _migrations (name) VALUES (?)")->execute([$mf]);
+                $log[] = '✅ ' . $mf; $ok++;
+            } catch (Throwable $e) {
+                $log[] = '❌ ' . $mf . ' — ' . substr($e->getMessage(), 0, 100); $fail++;
             }
-            if (!is_dir($dst)) @mkdir($dst, 0755, true);
-            foreach (array_diff(scandir($src), ['.', '..']) as $item) {
-                $copy("$src/$item", "$dst/$item");
-            }
-        };
-        $copy($extractRoot, $rootDir);
-
-        $log[] = "Dosyalar kopyalandı.";
-
-        // Cleanup
-        $rmrf = function($p) use (&$rmrf) {
-            if (is_dir($p)) {
-                foreach (array_diff(scandir($p), ['.', '..']) as $i) $rmrf("$p/$i");
-                @rmdir($p);
-            } else @unlink($p);
-        };
-        $rmrf($tmpDir);
-
-        // Migration'ları otomatik çalıştır
-        $migResult = run_migrations();
-        if ($migResult['applied'] > 0) {
-            $log[] = "✓ {$migResult['applied']} migration uygulandı: " . implode(', ', array_slice($migResult['log'], -$migResult['applied']));
         }
-        if ($migResult['errors']) {
-            $log[] = "⚠ Migration hataları: " . implode(' | ', $migResult['errors']);
-        }
-
-        if ($hist_id) {
-            $pdo->prepare("UPDATE update_history SET status='success', to_version=?, notes=? WHERE id=?")
-                ->execute([$newVer, implode("\n", $log), $hist_id]);
-        }
-        $duration = round(microtime(true) - ($_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true)), 1);
-        $msg = "Manuel güncelleme tamamlandı! Yeni sürüm: $newVer";
-        if ($migResult['applied'] > 0) $msg .= " ({$migResult['applied']} migration uygulandı)";
-        flash_set('success', $msg);
-        header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration); exit;
-
+        $log[] = "🎉 $ok yeni, $skip atlandı, $fail hata";
+        return ['ok'=>$fail===0, 'log'=>$log, 'new'=>$ok];
     } catch (Throwable $e) {
-        if ($hist_id) {
-            $pdo->prepare("UPDATE update_history SET status='failed', notes=? WHERE id=?")
-                ->execute([implode("\n", $log) . "\nHATA: " . $e->getMessage(), $hist_id]);
-        }
-        flash_set('error', 'Manuel güncelleme hatası: ' . $e->getMessage());
-        header('Location: update.php'); exit;
+        return ['ok'=>false, 'log'=>['❌ ' . $e->getMessage()], 'new'=>0];
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
-    csrf_required();
+// ══ AJAX Handler ══
+if (isset($_GET['upd_ajax'])) {
+    while (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
 
-    @set_time_limit(300);
-    @ini_set('memory_limit', '256M');
-
-    $log = [];
-    $start = microtime(true);
-    $hist_id = null;
+    // Tüm PHP hatalarını JSON olarak yakala (HTML hata sayfası dönmesin)
+    set_error_handler(function($severity, $message, $file, $line) {
+        if (!(error_reporting() & $severity)) return;
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+    set_exception_handler(function($e) {
+        echo json_encode(['ok'=>false, 'error'=>$e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine()]);
+        exit;
+    });
 
     try {
-        $log[] = "Sürüm bilgisi alınıyor...";
-        $r = fetch_latest_release();
-        if (isset($r['error'])) throw new RuntimeException($r['error']);
-        $latest = $r;
-        $newVer = ltrim($latest['tag_name'], 'v');
+        $aj  = $_GET['upd_ajax'];
+        $tok = upd_getTok();
 
-        if (ver_compare($newVer, $current_ver) <= 0) {
-            throw new RuntimeException("Zaten en güncel sürümdesiniz ($current_ver).");
-        }
-
-        // History kaydı oluştur
-        $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
-            ->execute([$current_ver, $newVer, 'failed', "Başlatıldı...", $cu['id']]);
-        $hist_id = (int)$pdo->lastInsertId();
-
-        // ZIP URL'ini bul
-        $zipUrl = null;
-        foreach (($latest['assets'] ?? []) as $a) {
-            if (str_ends_with(strtolower($a['name'] ?? ''), '.zip')) {
-                $zipUrl = $a['browser_download_url']; break;
-            }
-        }
-        if (!$zipUrl) $zipUrl = $latest['zipball_url'];
-        $log[] = "İndiriliyor: " . parse_url($zipUrl, PHP_URL_PATH);
-
-        // İndir
-        $tmpZip = sys_get_temp_dir() . "/lmdt_upd_" . bin2hex(random_bytes(4)) . ".zip";
-        $hh = ["User-Agent: lemondedutacos-updater"];
-        if (GITHUB_TOKEN !== '') $hh[] = "Authorization: Bearer " . GITHUB_TOKEN;
-        $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$hh),'timeout'=>120,'follow_location'=>1]]);
-        $bytes = @file_get_contents($zipUrl, false, $ctx);
-        if ($bytes === false) throw new RuntimeException("ZIP indirilemedi.");
-        file_put_contents($tmpZip, $bytes);
-        $log[] = "İndirilen boyut: " . round(strlen($bytes)/1024, 1) . " KB";
-
-        // Çıkar
-        $tmpDir = sys_get_temp_dir() . "/lmdt_ext_" . bin2hex(random_bytes(4));
-        @mkdir($tmpDir, 0755, true);
-        $zip = new ZipArchive();
-        if ($zip->open($tmpZip) !== true) throw new RuntimeException("ZIP açılamadı.");
-        $zip->extractTo($tmpDir);
-        $zip->close();
-        @unlink($tmpZip);
-
-        $contents = array_values(array_diff(scandir($tmpDir), ['.', '..']));
-        $extractRoot = $tmpDir;
-        if (count($contents) === 1 && is_dir($tmpDir . '/' . $contents[0])) {
-            $extractRoot = $tmpDir . '/' . $contents[0];
-        }
-
-        $protect = ['uploads', 'install.lock', 'includes/config.php'];
-        $isProtected = function (string $rel) use ($protect): bool {
-            foreach ($protect as $p) {
-                if ($rel === $p || str_starts_with($rel, $p . '/')) return true;
-            }
-            return false;
-        };
-
-        $rootDir = realpath(__DIR__ . '/..');
-        $copied = 0;
-        $touched = [];
-        $copyDir = function (string $src, string $dst, string $rel = '') use (&$copyDir, &$copied, &$touched, $isProtected) {
-            if (!is_dir($dst)) @mkdir($dst, 0755, true);
-            foreach (array_diff(scandir($src), ['.', '..']) as $item) {
-                $sp = $src . '/' . $item;
-                $dp = $dst . '/' . $item;
-                $r2 = $rel === '' ? $item : ($rel . '/' . $item);
-                if ($isProtected($r2)) continue;
-                if (is_dir($sp)) {
-                    $copyDir($sp, $dp, $r2);
-                } else {
-                    if (@copy($sp, $dp)) {
-                        $copied++;
-                        $touched[] = $dp;
-                    }
+    if ($aj === 'status') {
+        if (!$tok) { echo json_encode(['ok'=>false,'error'=>'Token yok. Ayarlar sekmesinden ekleyin.']); exit; }
+        try {
+            $rf = upd_repoTree($tok);
+            if (empty($rf)) { echo json_encode(['ok'=>false,'error'=>'Repo ağacı okunamadı']); exit; }
+            $stats = ['ok'=>0,'diff'=>0,'missing'=>0]; $fs = [];
+            foreach ($rf as $rec) {
+                $lp = SITE_ROOT . '/' . $rec['path'];
+                if (!file_exists($lp)) { $fs[$rec['path']] = ['status'=>'missing','size'=>$rec['size']]; $stats['missing']++; }
+                else {
+                    $sha = upd_blobSHA(file_get_contents($lp));
+                    if ($sha === $rec['sha']) { $fs[$rec['path']] = ['status'=>'ok','size'=>$rec['size']]; $stats['ok']++; }
+                    else { $fs[$rec['path']] = ['status'=>'diff','size'=>$rec['size']]; $stats['diff']++; }
                 }
             }
-        };
-        $log[] = "Dosyalar kopyalanıyor...";
-        $copyDir($extractRoot, $rootDir);
-        $log[] = "Toplam kopyalanan: $copied dosya";
-
-        // Geçici dizini temizle
-        $rmDir = function (string $d) use (&$rmDir) {
-            if (!is_dir($d)) return;
-            foreach (array_diff(scandir($d), ['.', '..']) as $i) {
-                $p = $d . '/' . $i;
-                is_dir($p) ? $rmDir($p) : @unlink($p);
-            }
-            @rmdir($d);
-        };
-        $rmDir($tmpDir);
-
-        // version.txt
-        @file_put_contents(__DIR__ . '/../version.txt', $newVer);
-
-        // config.php — APP_VERSION güncelle
-        $cfgPath = __DIR__ . '/../includes/config.php';
-        $cfg = @file_get_contents($cfgPath);
-        if ($cfg !== false) {
-            $cfg = preg_replace("/const\s+APP_VERSION\s*=\s*'[^']*';/", "const APP_VERSION  = '" . $newVer . "';", $cfg, 1);
-            @file_put_contents($cfgPath, $cfg);
-        }
-
-        // OPcache: kopyalanan PHP dosyalarını invalidate et (yoksa eski bytecode çalışır)
-        if (function_exists('opcache_invalidate')) {
-            opcache_invalidate($cfgPath, true);
-            foreach ($touched as $tp) {
-                if (str_ends_with($tp, '.php')) @opcache_invalidate($tp, true);
-            }
-        }
-
-        // Migration'ları otomatik çalıştır
-        $log[] = "Migration'lar kontrol ediliyor...";
-        $migResult = run_migrations();
-        if ($migResult['applied'] > 0) {
-            $log[] = "✓ {$migResult['applied']} migration uygulandı";
-            foreach (array_slice($migResult['log'], -($migResult['applied'] + $migResult['skipped'])) as $l) {
-                $log[] = "  $l";
-            }
-        } else {
-            $log[] = "Migration: hepsi güncel ({$migResult['skipped']} zaten uygulanmış)";
-        }
-        if ($migResult['errors']) {
-            $log[] = "⚠ Migration hataları (atlandı): " . implode(' | ', $migResult['errors']);
-        }
-
-        $duration = round(microtime(true) - $start, 2);
-        $log[] = "Süre: $duration sn";
-        $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
-            ->execute(['success', implode("\n", $log), $hist_id]);
-        log_activity('system_updated', null, "v$current_ver → v$newVer");
-
-        // PRG redirect — bu noktada ÇIKTI VERİLMEDİ, header() çalışacak
-        header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration);
+            echo json_encode(['ok'=>true,'local_ver'=>upd_localVer(),'remote_ver'=>upd_ghVer($tok),
+                'stats'=>$stats,'total'=>count($rf),'files'=>$fs,
+                'needs_update'=>($stats['diff']+$stats['missing'])>0]);
+        } catch(Throwable $e) { echo json_encode(['ok'=>false,'error'=>$e->getMessage()]); }
         exit;
-    } catch (Throwable $ex) {
-        if ($hist_id) {
-            $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
-                ->execute(['failed', implode("\n", $log) . "\nHATA: " . $ex->getMessage(), $hist_id]);
+    }
+
+    if ($aj === 'sync' || $aj === 'force_sync') {
+        if (!$tok) { echo json_encode(['ok'=>false,'error'=>'Token yok']); exit; }
+        $log = []; $updated = 0; $errors = []; $force = $aj === 'force_sync';
+        try {
+            $bk = upd_backup($force ? 'force' : 'sync');
+            if ($bk['ok']) $log[] = '📦 Yedek: ' . $bk['name'];
+            $rf = upd_repoTree($tok);
+            $log[] = ($force ? '🔥 TÜM ' : '📋 ') . count($rf) . ' dosya ' . ($force ? 'yeniden indiriliyor' : 'kontrol ediliyor');
+            foreach ($rf as $rec) {
+                $lp = SITE_ROOT . '/' . $rec['path'];
+                if (upd_isExcluded($rec['path'])) continue;
+                if (!$force && file_exists($lp) && upd_blobSHA(file_get_contents($lp)) === $rec['sha']) continue;
+                $c = upd_ghDownload($rec['path'], $tok);
+                if ($c === null) { $errors[] = '❌ ' . $rec['path']; continue; }
+                $dir = dirname($lp);
+                if (!is_dir($dir)) @mkdir($dir, 0755, true);
+                if (@file_put_contents($lp, $c) !== false) { $log[] = '✅ ' . $rec['path']; $updated++; }
+                else $errors[] = '❌ ' . $rec['path'] . ' yazma hatası';
+            }
+            $log[] = '🎉 ' . $updated . ' dosya güncellendi';
+            if ($updated > 0) {
+                $mig = upd_runMigrations();
+                if (!empty($mig['log'])) { $log[] = ''; $log[] = '🗄️ DB Migration:'; $log = array_merge($log, $mig['log']); }
+                if (function_exists('opcache_reset')) @opcache_reset();
+            }
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS update_history(id INT AUTO_INCREMENT PRIMARY KEY,version VARCHAR(20),prev_version VARCHAR(20),release_notes TEXT,log_data TEXT,success TINYINT(1) DEFAULT 1,installed_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
+                $pdo->prepare("INSERT INTO update_history(version,prev_version,release_notes,log_data,success) VALUES(?,?,?,?,?)")
+                    ->execute([upd_localVer(), upd_localVer(), ($force?'Force Sync':'Smart Sync').': '.$updated.' dosya', json_encode($log,JSON_UNESCAPED_UNICODE), $updated>0?1:0]);
+            } catch(Throwable $e) {}
+        } catch(Throwable $e) { $errors[] = '❌ ' . $e->getMessage(); }
+        echo json_encode(['ok'=>empty($errors) || $updated>0, 'log'=>$log, 'errors'=>$errors, 'updated'=>$updated, 'version'=>upd_localVer()]);
+        exit;
+    }
+
+    if ($aj === 'update_file') {
+        $file = trim($_POST['file'] ?? '');
+        if (!$file || !$tok) { echo json_encode(['ok'=>false,'error'=>'Eksik parametre']); exit; }
+        if (upd_isExcluded($file)) { echo json_encode(['ok'=>false,'error'=>'Korumalı dosya']); exit; }
+        $c = upd_ghDownload($file, $tok);
+        if ($c === null) { echo json_encode(['ok'=>false,'error'=>'İndirme hatası']); exit; }
+        $lp = SITE_ROOT . '/' . $file;
+        if (!is_dir(dirname($lp))) @mkdir(dirname($lp), 0755, true);
+        $w = @file_put_contents($lp, $c);
+        echo json_encode($w !== false ? ['ok'=>true,'bytes'=>$w] : ['ok'=>false,'error'=>'Yazma hatası']);
+        exit;
+    }
+
+    if ($aj === 'commits') {
+        if (!$tok) { echo json_encode(['ok'=>false,'error'=>'Token yok']); exit; }
+        $d = upd_ghAPI('/commits?sha=' . GH_BRANCH . '&per_page=20', $tok);
+        if (!$d) { echo json_encode(['ok'=>false,'error'=>'Commit alınamadı']); exit; }
+        $out = [];
+        foreach ($d as $c) $out[] = [
+            'sha' => substr($c['sha'],0,7), 'message' => $c['commit']['message'] ?? '',
+            'author' => $c['commit']['author']['name'] ?? '', 'date' => $c['commit']['author']['date'] ?? '',
+            'url' => $c['html_url'] ?? '',
+        ];
+        echo json_encode(['ok'=>true,'commits'=>$out]);
+        exit;
+    }
+
+    if ($aj === 'backups') {
+        $bks = glob(BK_DIR . '/bk_*.zip') ?: [];
+        usort($bks, fn($a,$b) => filemtime($b) <=> filemtime($a));
+        echo json_encode(['ok'=>true, 'backups'=>array_map(fn($p)=>[
+            'name' => basename($p), 'size' => filesize($p), 'time' => filemtime($p),
+            'ver' => preg_match('/_v([\d.]+)\.zip$/', basename($p), $m) ? $m[1] : '?',
+        ], $bks)]);
+        exit;
+    }
+
+    if ($aj === 'restore') {
+        $name = basename(trim($_POST['backup'] ?? ''));
+        if (!$name) { echo json_encode(['ok'=>false,'error'=>'Yedek yok']); exit; }
+        $path = BK_DIR . '/' . $name;
+        if (!file_exists($path)) { echo json_encode(['ok'=>false,'error'=>'Dosya yok']); exit; }
+        $safeBk = upd_backup('pre_restore');
+        $log = []; if ($safeBk['ok']) $log[] = '📦 Güvenlik yedeği: ' . $safeBk['name'];
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) { echo json_encode(['ok'=>false,'error'=>'ZIP açılamadı']); exit; }
+        $r = 0;
+        for ($i=0; $i<$zip->numFiles; $i++) {
+            $f = $zip->getNameIndex($i);
+            $c = $zip->getFromIndex($i);
+            if ($c === false || upd_isExcluded($f)) continue;
+            $t = SITE_ROOT . '/' . $f;
+            if (!is_dir(dirname($t))) @mkdir(dirname($t), 0755, true);
+            if (@file_put_contents($t, $c) !== false) { $log[] = '✅ ' . $f; $r++; }
         }
-        flash_set('error', 'Güncelleme başarısız: ' . $ex->getMessage());
-        header('Location: update.php'); exit;
+        $zip->close();
+        if (function_exists('opcache_reset')) @opcache_reset();
+        $log[] = '🎉 ' . $r . ' dosya geri yüklendi';
+        echo json_encode(['ok'=>true,'log'=>$log,'restored'=>$r,'version'=>upd_localVer()]);
+        exit;
+    }
+
+    if ($aj === 'delete_backup') {
+        $name = basename(trim($_POST['backup'] ?? ''));
+        if (file_exists(BK_DIR . '/' . $name)) @unlink(BK_DIR . '/' . $name);
+        echo json_encode(['ok'=>true]);
+        exit;
+    }
+
+    if ($aj === 'save_token') {
+        $t = preg_replace('/[^a-zA-Z0-9_\-]/','',trim($_POST['token']??''));
+        if (strlen($t) < 20) { echo json_encode(['ok'=>false,'error'=>'Token çok kısa']); exit; }
+        $ok = @file_put_contents(TOK_FILE, $t) !== false;
+        if ($ok) @chmod(TOK_FILE, 0600);
+        echo json_encode(['ok'=>$ok]);
+        exit;
+    }
+
+    if ($aj === 'test_token') {
+        if (!$tok) { echo json_encode(['ok'=>false,'error'=>'Token yok']); exit; }
+        $d = upd_ghAPI('', $tok);
+        if ($d && !empty($d['full_name'])) echo json_encode(['ok'=>true,'repo'=>$d['full_name'],'private'=>$d['private']??false]);
+        else echo json_encode(['ok'=>false,'error'=>'Geçersiz token']);
+        exit;
+    }
+
+    if ($aj === 'migrate') {
+        $r = upd_runMigrations();
+        echo json_encode(['ok'=>$r['ok'],'log'=>$r['log'],'new'=>$r['new']??0]);
+        exit;
+    }
+
+    if ($aj === 'history') {
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS update_history(id INT AUTO_INCREMENT PRIMARY KEY,version VARCHAR(20),prev_version VARCHAR(20),release_notes TEXT,log_data TEXT,success TINYINT(1) DEFAULT 1,installed_at DATETIME DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB");
+            $rows = $pdo->query("SELECT version,prev_version,release_notes,success,installed_at FROM update_history ORDER BY installed_at DESC LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['ok'=>true,'history'=>$rows]);
+        } catch(Throwable $e) { echo json_encode(['ok'=>false,'error'=>$e->getMessage()]); }
+        exit;
+    }
+
+    echo json_encode(['ok'=>false,'error'=>'Bilinmeyen işlem']);
+    exit;
+    } catch (Throwable $e) {
+        echo json_encode(['ok'=>false, 'error'=>$e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine()]);
+        exit;
     }
 }
 
-/* === Buradan sonra HTML render başlıyor === */
-$page_h = 'Sistem Güncelleme';
+$tok_tan = upd_getTok();
+$cur_ver = upd_localVer();
+
 require __DIR__ . '/_header.php';
-
-/* Sürüm bilgisi (her zaman çek - render aşaması) */
-$latest = null;
-$check_error = null;
-$r = fetch_latest_release();
-if (isset($r['error'])) {
-    $check_error = $r['error'];
-} else {
-    $latest = $r;
-}
-
-/* Başarı ekranı (PRG sonrası) */
-$show_success  = !empty($_GET['completed']);
-$success_from  = $_GET['from'] ?? '';
-$success_to    = $_GET['to']   ?? '';
-$success_dur   = $_GET['dur']  ?? '0';
-
-$history = $pdo->query("SELECT * FROM update_history ORDER BY id DESC LIMIT 10")->fetchAll();
-$has_update = $latest && ver_compare(ltrim($latest['tag_name'], 'v'), $current_ver) > 0;
 ?>
 
-<?php if ($show_success): ?>
-<div class="card" style="text-align:center;padding:40px 32px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;position:relative;overflow:hidden">
-  <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(34,197,94,.15),transparent 60%);pointer-events:none"></div>
-  <div style="position:relative;z-index:1">
-    <div style="width:104px;height:104px;margin:0 auto 18px;position:relative">
-      <svg viewBox="0 0 100 100" style="width:104px;height:104px">
-        <circle cx="50" cy="50" r="44" fill="none" stroke="#a7f3d0" stroke-width="6"/>
-        <circle id="success-circle" cx="50" cy="50" r="44" fill="none" stroke="#16a34a" stroke-width="6"
-                stroke-dasharray="276" stroke-dashoffset="276" stroke-linecap="round"
-                style="transition:stroke-dashoffset 1.2s ease;transform:rotate(-90deg);transform-origin:50% 50%"/>
-      </svg>
-      <div id="success-tick" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:#16a34a;opacity:0;transform:scale(.5);transition:.4s">
-        <i class="fa-solid fa-check"></i>
-      </div>
-    </div>
-    <h2 style="font-size:26px;color:#16a34a;margin:0 0 8px;font-weight:800">Güncelleme Tamamlandı!</h2>
-    <p style="color:#065f46;font-size:15px;margin:0 0 4px">
-      <strong>v<?= e($success_from) ?></strong> → <strong>v<?= e($success_to) ?></strong> sürümüne yükseltildi
-    </p>
-    <p style="color:#047857;font-size:13px;margin:0 0 22px">İşlem süresi: <?= e($success_dur) ?> saniye</p>
-
-    <div style="display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center">
-      <a href="update.php" class="btn">Güncelleme Sayfası</a>
-      <a href="index.php" class="btn btn-secondary">Pano</a>
-      <a href="/" target="_blank" class="btn btn-line">Siteyi Aç <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-    </div>
-  </div>
-</div>
-
-<script>
-setTimeout(()=>{
-  const c=document.getElementById('success-circle');
-  if(c) c.style.strokeDashoffset='0';
-},150);
-setTimeout(()=>{
-  const t=document.getElementById('success-tick');
-  if(t){t.style.opacity='1';t.style.transform='scale(1)'}
-},800);
-</script>
-<?php endif; ?>
-
-<div class="grid-2">
-  <div class="metric">
-    <div class="lbl">Mevcut Sürüm</div>
-    <div class="val">v<?= e($current_ver) ?></div>
-    <div class="delta">Sunucudaki yerel sürüm</div>
-  </div>
-  <?php if ($latest): ?>
-    <div class="metric">
-      <div class="lbl">GitHub'da Mevcut Sürüm</div>
-      <div class="val" style="color:<?= $has_update ? '#d97706' : '#16a34a' ?>"><?= e($latest['tag_name']) ?></div>
-      <div class="delta"><?= $has_update ? '⚠ Yeni sürüm mevcut' : '✓ Sisteminiz güncel' ?></div>
-    </div>
-  <?php else: ?>
-    <div class="metric">
-      <div class="lbl">GitHub Bağlantısı</div>
-      <div class="val" style="color:#dc2626;font-size:14px;line-height:1.3">Erişilemedi</div>
-      <div class="delta"><?= e($check_error ?? '') ?></div>
-    </div>
-  <?php endif; ?>
-</div>
-
-<?php if ($has_update): ?>
-<div class="card" style="margin-top:18px;border:2px solid #fde68a">
-  <h2 style="color:#d97706;display:flex;align-items:center;gap:10px">
-    <i class="fa-solid fa-cloud-arrow-down"></i>
-    Güncellemeyi Uygula
-  </h2>
-
-  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;font-size:13px">
-    <div><strong>Sürüm:</strong> <?= e($latest['tag_name']) ?></div>
-    <div><strong>Yayın:</strong> <?= format_date($latest['published_at'], 'd.m.Y H:i') ?></div>
-    <?php if (!empty($latest['author']['login'])): ?>
-      <div><strong>Yayınlayan:</strong> <?= e($latest['author']['login']) ?></div>
-    <?php endif; ?>
-  </div>
-
-  <?php if (!empty($latest['body'])): ?>
-    <details style="margin-bottom:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:0">
-      <summary style="cursor:pointer;font-weight:700;color:#92400e;padding:10px 14px;font-size:13px">📋 Sürüm Notları</summary>
-      <pre style="background:#fff;padding:14px;font-size:12px;line-height:1.6;overflow:auto;margin:0;border-top:1px solid #fde68a;white-space:pre-wrap"><?= e($latest['body']) ?></pre>
-    </details>
-  <?php endif; ?>
-
-  <div class="flash flash-warning" style="margin-bottom:16px">
-    <strong>⚠ Önemli:</strong>
-    <ul style="margin:6px 0 0 18px;font-size:12.5px;line-height:1.7">
-      <li>Güncelleme sırasında <code>uploads/</code>, <code>includes/config.php</code> ve <code>install.lock</code> korunur</li>
-      <li>İşlem 10-30 saniye sürebilir, lütfen sayfayı kapatmayın</li>
-      <li>Önemli verileriniz için yedek almanız önerilir</li>
-    </ul>
-  </div>
-
-  <form method="post" id="update-form" onsubmit="return startUpdate(this)">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="apply">
-    <button type="submit" id="update-btn" class="btn btn-warn" style="font-size:15px;padding:12px 24px">
-      <i class="fa-solid fa-cloud-arrow-down"></i> Güncellemeyi Şimdi Başlat
-    </button>
-
-    <div id="update-progress" style="display:none;margin-top:18px">
-      <div style="height:6px;background:#fef3c7;border-radius:99px;overflow:hidden;max-width:560px">
-        <div id="update-bar" style="height:6px;width:0;background:linear-gradient(90deg,#f59e0b,#16a34a);border-radius:99px;transition:width 8s linear"></div>
-      </div>
-      <div id="update-msg" style="font-size:13px;color:#374151;margin-top:10px;font-weight:600;display:flex;align-items:center;gap:8px">
-        <span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite"></span>
-        <span id="update-msg-text">Hazırlanıyor...</span>
-      </div>
-    </div>
-  </form>
-</div>
-
-<style>@keyframes spin-r{to{transform:rotate(360deg)}}</style>
-
-<script>
-function startUpdate(form) {
-  if (!confirm('Güncellemeyi başlatmak üzeresiniz. Devam edilsin mi?\n\nİşlem 15-45 saniye sürebilir, sayfayı kapatmayın.')) return false;
-  const btn = document.getElementById('update-btn');
-  const txt = document.getElementById('update-msg-text');
-  document.getElementById('update-progress').style.display = 'block';
-
-  // Progress bar: 30 saniyede %92'ye ulaşır - sunucu cevabı gelene kadar
-  setTimeout(() => { document.getElementById('update-bar').style.width = '92%'; }, 80);
-
-  const stages = [
-    [0,     '🔗 GitHub API\'ye bağlanılıyor...'],
-    [2000,  '📦 Sürüm paketi indiriliyor...'],
-    [5000,  '📂 ZIP açılıyor...'],
-    [9000,  '🗂 Dosyalar kopyalanıyor (uploads ve config korunuyor)...'],
-    [15000, '🔧 Sürüm bilgileri güncelleniyor...'],
-    [22000, '✅ Son kontroller yapılıyor...'],
-    [28000, '⏱ Az kaldı, sayfa otomatik yenilenecek...'],
-  ];
-  stages.forEach(([t, m]) => setTimeout(() => { txt.textContent = m; }, t));
-
-  // Buton'u submit'ten SONRA disable et (bazı browserlar disable submit'i engelliyor)
-  setTimeout(() => { btn.disabled = true; btn.style.opacity = '0.6'; }, 100);
-
-  return true;
-}
-</script>
 <style>
-@keyframes spin{to{transform:rotate(360deg)}}
-#update-bar{transition:width 30s linear !important}
+.upd-wrap{font-family:system-ui,-apple-system,sans-serif}
+.upd-wrap *{box-sizing:border-box}
+.upd-head{margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.upd-head .sub{font-size:13px;color:#6b7280;font-weight:600}
+.upd-repo{font-size:11px;color:#6b7280;font-family:'SF Mono',Menlo,monospace}
+.upd-tabs{display:flex;border-bottom:1px solid #e5e7eb;margin-bottom:18px;overflow-x:auto;background:#fff;border-radius:10px 10px 0 0;padding:0 4px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.upd-tab{padding:12px 18px;font-size:13px;font-weight:600;border:none;background:none;color:#6b7280;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:all .15s}
+.upd-tab:hover{color:#3a5f0b;background:rgba(58,95,11,.05)}
+.upd-tab.on{color:#3a5f0b;border-bottom-color:#3a5f0b;background:rgba(58,95,11,.07)}
+.upd-body{display:none}.upd-body.on{display:block}
+.upd-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.upd-card-h{padding:14px 20px;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;display:flex;align-items:center;gap:8px}
+.upd-card-b{padding:20px}
+.upd-ver{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.upd-vbox{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px 28px;min-width:150px;text-align:center}
+.upd-vlbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;font-weight:700;margin-bottom:8px}
+.upd-vval{font-size:30px;font-weight:800;font-family:'SF Mono',Menlo,monospace;color:#1f2937;letter-spacing:-.03em;line-height:1}
+.upd-arrow{font-size:24px;color:#9ca3af}
+.upd-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.upd-stat{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:22px 16px;text-align:center;transition:all .15s}
+.upd-stat:hover{border-color:#3a5f0b;background:#fff}
+.upd-stat-v{font-size:36px;font-weight:800;font-family:'SF Mono',Menlo,monospace;letter-spacing:-.03em;line-height:1;color:#1f2937}
+.upd-stat-l{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;margin-top:8px;font-weight:700}
+.upd-act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.upd-btn{padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit;display:inline-flex;align-items:center;gap:7px;transition:all .15s}
+.upd-btn:disabled{opacity:.5;cursor:not-allowed}
+.upd-btn-ghost{background:#fff;border-color:#d1d5db;color:#374151}
+.upd-btn-ghost:hover{border-color:#3a5f0b;color:#3a5f0b}
+.upd-btn-blue{background:#3a5f0b;color:#fff;box-shadow:0 2px 6px rgba(58,95,11,.25)}
+.upd-btn-blue:hover{background:#2a4508}
+.upd-btn-orange{background:#f59e0b;color:#fff}
+.upd-btn-orange:hover{background:#d97706}
+.upd-btn-red{background:#fee2e2;color:#dc2626;border-color:#fecaca}
+.upd-btn-sm{padding:6px 12px;font-size:11px}
+.upd-btn-xs{padding:4px 8px;font-size:10px}
+.upd-badge{padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.upd-b-green{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.upd-b-blue{background:rgba(58,95,11,.1);color:#3a5f0b;border:1px solid rgba(58,95,11,.3)}
+.upd-b-warn{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.upd-b-red{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.upd-fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px;max-height:640px;overflow-y:auto;padding:4px 2px}
+.upd-fitem{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:6px;background:#f9fafb;border:1px solid transparent;font-size:11px;font-family:'SF Mono',Menlo,monospace;color:#374151}
+.upd-fitem.f-ok{border-color:#a7f3d0;background:#ecfdf5}
+.upd-fitem.f-diff{border-color:#fecaca;background:#fef2f2}
+.upd-fitem.f-miss{border-color:#fde68a;background:#fffbeb}
+.upd-fitem .fn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.upd-commit{padding:14px 0;border-bottom:1px solid #e5e7eb}
+.upd-commit:last-child{border-bottom:none}
+.upd-csha{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#3a5f0b;font-weight:700}
+.upd-cmsg{font-size:14px;font-weight:600;color:#1f2937;margin:4px 0}
+.upd-cmeta{font-size:11px;color:#9ca3af}
+.upd-bk{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid #e5e7eb}
+.upd-bk-name{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#1f2937;word-break:break-all}
+.upd-bk-meta{font-size:11px;color:#9ca3af;margin-top:2px}
+.upd-inp{padding:10px 14px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:'SF Mono',Menlo,monospace;width:100%;color:#1f2937}
+.upd-inp:focus{outline:none;border-color:#3a5f0b;box-shadow:0 0 0 3px rgba(58,95,11,.1)}
+.upd-sect{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;font-weight:700;margin:18px 0 10px}
+#upd-ov{position:fixed;inset:0;background:rgba(15,23,42,.85);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
+#upd-ov.show{display:flex}
+.upd-ovbox{background:#fff;border-radius:14px;padding:28px;max-width:560px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.upd-ov-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.upd-ovicon{font-size:36px;width:60px;height:60px;background:rgba(58,95,11,.1);border-radius:14px;display:flex;align-items:center;justify-content:center}
+.upd-ovtitle{font-size:18px;font-weight:800;color:#1f2937}
+.upd-ovsub{font-size:13px;color:#6b7280;margin-top:2px}
+.upd-pbar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:14px}
+.upd-pfill{height:100%;background:linear-gradient(90deg,#3a5f0b,#16a34a);width:5%;border-radius:3px;transition:width .6s}
+#upd-ovlog{font-family:'SF Mono',Menlo,monospace;font-size:11.5px;background:#0f172a;color:#cbd5e1;padding:14px;border-radius:8px;max-height:280px;overflow-y:auto;margin-bottom:14px;line-height:1.7}
+#upd-ovlog .ol-ok{color:#86efac}
+#upd-ovlog .ol-err{color:#fca5a5}
+#upd-ovlog .ol-info{color:#93c5fd}
+.upd-ovact{display:none}
+.upd-toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.2);z-index:10000}
 </style>
-<?php endif; ?>
 
-<div class="card">
-  <h2><i class="fa-brands fa-github"></i> GitHub Repo</h2>
-  <table>
-    <tr><th style="width:160px">Owner</th><td><code><?= e(GITHUB_OWNER) ?></code></td></tr>
-    <tr><th>Repo</th><td><code><?= e(GITHUB_REPO) ?></code></td></tr>
-    <tr><th>Token</th><td><?= GITHUB_TOKEN ? '<span class="badge b-on">Tanımlı</span>' : '<span class="badge b-info">Yok</span>' ?></td></tr>
-    <tr><th>Repo URL</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?></a></td></tr>
-    <tr><th>Releases</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">Tüm sürümleri gör →</a></td></tr>
-  </table>
-</div>
+<div class="upd-wrap">
+  <div class="upd-head">
+    <div><div class="sub">Güncelleme Merkezi v5.0 — Git SHA Senkronizasyon</div></div>
+    <div class="upd-repo"><?= GH_REPO ?> · <?= GH_BRANCH ?></div>
+  </div>
 
-<?php
-// Bağlantı testi - GitHub erişilebilir mi?
-$connectivity = ['allow_url_fopen' => (bool)ini_get('allow_url_fopen'), 'curl' => function_exists('curl_init')];
-$github_test = null;
-if ($connectivity['allow_url_fopen']) {
-    $url = "https://api.github.com/repos/" . GITHUB_OWNER . "/" . GITHUB_REPO . "/releases/latest";
-    $h = ["User-Agent: lemondedutacos-updater", "Accept: application/vnd.github+json"];
-    if (GITHUB_TOKEN !== '') $h[] = "Authorization: Bearer " . GITHUB_TOKEN;
-    $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$h),'timeout'=>5,'ignore_errors'=>true]]);
-    $resp = @file_get_contents($url, false, $ctx);
-    if ($resp === false) {
-        $github_test = ['ok' => false, 'msg' => 'Bağlantı kurulamadı (timeout veya firewall)'];
-    } else {
-        $code = isset($http_response_header[0]) ? $http_response_header[0] : '';
-        $j = json_decode($resp, true);
-        if (str_contains($code, '200') && isset($j['tag_name'])) {
-            $github_test = ['ok' => true, 'msg' => "GitHub erişilebilir, son sürüm: " . $j['tag_name']];
-        } else {
-            $github_test = ['ok' => false, 'msg' => "API hatası: " . trim($code) . " — " . ($j['message'] ?? 'bilinmiyor')];
-        }
-    }
-}
-?>
+  <div class="upd-tabs">
+    <button class="upd-tab on" onclick="updTab('overview',this)"><i class="fa-solid fa-satellite-dish"></i> Genel Durum</button>
+    <button class="upd-tab" onclick="updTab('files',this)"><i class="fa-solid fa-folder-tree"></i> Dosyalar</button>
+    <button class="upd-tab" onclick="updTab('commits',this)"><i class="fa-solid fa-code-commit"></i> Commits</button>
+    <button class="upd-tab" onclick="updTab('backups',this)"><i class="fa-solid fa-box-archive"></i> Yedekler</button>
+    <button class="upd-tab" onclick="updTab('database',this)"><i class="fa-solid fa-database"></i> Database</button>
+    <button class="upd-tab" onclick="updTab('settings',this)"><i class="fa-solid fa-gear"></i> Ayarlar</button>
+  </div>
 
-<div class="card">
-  <h2><i class="fa-solid fa-stethoscope"></i> Bağlantı Diagnostik</h2>
-  <table>
-    <tr><th style="width:200px">PHP <code>allow_url_fopen</code></th><td><?= $connectivity['allow_url_fopen'] ? '<span class="badge b-on">Açık</span>' : '<span class="badge b-off">KAPALI</span> (php.ini\'de açın)' ?></td></tr>
-    <tr><th>cURL</th><td><?= $connectivity['curl'] ? '<span class="badge b-on">Mevcut</span>' : '<span class="badge b-info">Yok</span>' ?></td></tr>
-    <?php if ($github_test): ?>
-      <tr><th>GitHub API</th>
-        <td>
-          <?php if ($github_test['ok']): ?>
-            <span class="badge b-on">Erişilebilir</span> <?= e($github_test['msg']) ?>
-          <?php else: ?>
-            <span class="badge b-off">HATA</span> <?= e($github_test['msg']) ?>
+  <div id="upd-overview" class="upd-body on">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-code-branch"></i> REPOSITORY STATUS — <?= GH_BRANCH ?> BRANCH</div>
+      <div class="upd-card-b">
+        <div class="upd-ver">
+          <div class="upd-vbox"><div class="upd-vlbl">LOCAL</div><div class="upd-vval" id="upd-vlocal"><?= htmlspecialchars($cur_ver) ?></div></div>
+          <span class="upd-arrow">→</span>
+          <div class="upd-vbox"><div class="upd-vlbl">GITHUB</div><div class="upd-vval" id="upd-vremote">…</div></div>
+          <div id="upd-vbadge"><span class="upd-badge upd-b-blue">Kontrol ediliyor…</span></div>
+        </div>
+        <div class="upd-stats">
+          <div class="upd-stat"><div class="upd-stat-v" id="upd-sok" style="color:#16a34a">—</div><div class="upd-stat-l">Up to Date</div></div>
+          <div class="upd-stat"><div class="upd-stat-v" id="upd-sdiff" style="color:#dc2626">—</div><div class="upd-stat-l">Changed</div></div>
+          <div class="upd-stat"><div class="upd-stat-v" id="upd-smiss" style="color:#f59e0b">—</div><div class="upd-stat-l">Missing</div></div>
+          <div class="upd-stat"><div class="upd-stat-v" id="upd-stot" style="color:#6b7280">—</div><div class="upd-stat-l">Total</div></div>
+        </div>
+        <div class="upd-act">
+          <button id="upd-btn-check" class="upd-btn upd-btn-ghost" onclick="updCheck()"><i class="fa-solid fa-satellite-dish"></i> Check Status</button>
+          <button id="upd-btn-sync" class="upd-btn upd-btn-blue" onclick="updSync()"><i class="fa-solid fa-arrow-up"></i> Smart Update</button>
+          <button id="upd-btn-force" class="upd-btn upd-btn-orange" onclick="updForce()"><i class="fa-solid fa-fire"></i> Force Update</button>
+          <?php if (!$tok_tan): ?>
+          <span class="upd-badge upd-b-warn" style="margin-left:auto"><i class="fa-solid fa-triangle-exclamation"></i> Token ayarlanmamış</span>
           <?php endif; ?>
-        </td>
-      </tr>
-    <?php endif; ?>
-  </table>
-  <?php if ($github_test && !$github_test['ok']): ?>
-    <div style="margin-top:14px;padding:12px;background:#fef3c7;border-left:4px solid #d97706;border-radius:6px;font-size:13px;line-height:1.7">
-      <strong>⚠ Otomatik güncelleme çalışmıyor.</strong><br>
-      GitHub'a erişim sağlanamadığı için "Güncellemeyi Şimdi Başlat" butonu çalışmaz.
-      <strong>Çözüm:</strong> Aşağıdaki "Manuel Yükleme" bölümünü kullanın.<br>
-      <strong>Olası sebepler:</strong> Repo private + token boş, sunucu firewall, php.ini allow_url_fopen kapalı.
-    </div>
-  <?php endif; ?>
-</div>
-
-<div class="card" style="border-left:4px solid #16a34a">
-  <h2><i class="fa-solid fa-cloud-arrow-up"></i> Manuel Yükleme (GitHub erişimi gerekmez)</h2>
-  <p style="font-size:13px;line-height:1.7;color:var(--muted)">
-    Eğer otomatik güncelleme çalışmıyorsa: GitHub'tan ZIP'i bilgisayarınıza indirin, aşağıdan yükleyin.
-  </p>
-  <ol style="font-size:13px;line-height:1.8;margin:8px 0 14px 22px">
-    <li><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases</a> → en üstteki sürüm</li>
-    <li><strong>Assets</strong> bölümünden <code>lemondedutacos-vX.X.X.zip</code> dosyasını indir</li>
-    <li>Aşağıdaki forma yükle ve "Yükle ve Uygula" tıkla</li>
-  </ol>
-  <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Manuel güncelleme uygulanacak. Devam edilsin mi?')">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="manual_apply">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input type="file" name="zipfile" accept=".zip" required style="flex:1;min-width:240px">
-      <button type="submit" class="btn"><i class="fa-solid fa-upload"></i> Yükle ve Uygula</button>
-    </div>
-  </form>
-</div>
-
-<?php
-// Migration durumu
-$mig_dir = __DIR__ . '/../migrations';
-$mig_files = is_dir($mig_dir) ? array_filter(scandir($mig_dir), function ($f) {
-    return preg_match('/^\d+_.+\.sql$/', $f);
-}) : [];
-sort($mig_files);
-
-// _migrations tablosu var mı, çalıştırılmış olanlar
-$mig_applied = [];
-try {
-    $stmt = $pdo->query("SELECT name, applied_at FROM `_migrations` ORDER BY id");
-    if ($stmt) $mig_applied = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Throwable $e) {
-    // Tablo henüz yok
-}
-$applied_names = array_flip(array_column($mig_applied, 'name'));
-$pending_count = count(array_filter($mig_files, function ($f) use ($applied_names) {
-    return !isset($applied_names[$f]);
-}));
-?>
-
-<div class="card" style="<?= $pending_count > 0 ? 'border-left:4px solid #d97706' : '' ?>">
-  <h2>
-    <i class="fa-solid fa-database"></i> Veritabanı Migration'ları
-    <?php if ($pending_count > 0): ?>
-      <span style="background:#d97706;color:white;padding:2px 10px;border-radius:12px;font-size:12px;margin-left:8px"><?= $pending_count ?> bekliyor</span>
-    <?php endif; ?>
-  </h2>
-  <p style="font-size:13px;color:var(--muted);line-height:1.7">
-    Migration'lar veritabanı schema değişikliklerini otomatik uygular.
-    Otomatik veya manuel güncelleme sonrasında otomatik çalışır,
-    aşağıdaki butonla manuel da çalıştırabilirsiniz.
-  </p>
-
-  <?php if (!$mig_files): ?>
-    <div class="empty">migrations/ klasöründe dosya yok.</div>
-  <?php else: ?>
-    <table>
-      <thead><tr><th>Dosya</th><th>Durum</th><th>Uygulanma Zamanı</th></tr></thead>
-      <tbody>
-        <?php foreach ($mig_files as $mf):
-          $applied = null;
-          foreach ($mig_applied as $ma) if ($ma['name'] === $mf) { $applied = $ma; break; }
-        ?>
-          <tr>
-            <td><code style="font-size:12px"><?= e($mf) ?></code></td>
-            <td>
-              <?php if ($applied): ?>
-                <span class="badge b-on">✓ Uygulandı</span>
-              <?php else: ?>
-                <span class="badge b-info">⏳ Bekliyor</span>
-              <?php endif; ?>
-            </td>
-            <td style="font-size:12px;color:var(--muted)">
-              <?= $applied ? format_date($applied['applied_at']) : '—' ?>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-
-    <?php if ($pending_count > 0): ?>
-      <form method="post" style="margin-top:16px" onsubmit="return confirm('<?= $pending_count ?> migration uygulanacak. Devam edilsin mi?')">
-        <?= csrf_field() ?>
-        <input type="hidden" name="action" value="run_migrations">
-        <button type="submit" class="btn">
-          <i class="fa-solid fa-play"></i> Bekleyen Migration'ları Şimdi Çalıştır (<?= $pending_count ?>)
-        </button>
-      </form>
-    <?php else: ?>
-      <div class="ok" style="margin-top:14px;padding:10px 14px;background:#d1fae5;border-left:4px solid #16a34a;border-radius:6px;color:#065f46;font-size:13px">
-        ✓ Tüm migration'lar uygulanmış durumda.
+        </div>
       </div>
-    <?php endif; ?>
-  <?php endif; ?>
+    </div>
+  </div>
+
+  <div id="upd-files" class="upd-body">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-file-code"></i> DOSYA DURUMU</div>
+      <div class="upd-card-b">
+        <p id="upd-fmsg" style="color:#9ca3af;font-size:13px;margin-bottom:12px">Önce "Check Status" çalıştırın.</p>
+        <div class="upd-fgrid" id="upd-fgrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="upd-commits" class="upd-body">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-code-commit"></i> SON COMMITLER</div>
+      <div class="upd-card-b"><div id="upd-clist"><p style="color:#9ca3af;padding:14px;text-align:center">Yükleniyor…</p></div></div>
+    </div>
+  </div>
+
+  <div id="upd-backups" class="upd-body">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-box-archive"></i> YEDEKLER <span id="upd-bkcnt" style="margin-left:auto;color:#9ca3af;font-weight:500"></span></div>
+      <div class="upd-card-b">
+        <p style="color:#9ca3af;font-size:12px;margin-bottom:12px">Her güncelleme öncesi otomatik yedek alınır. Son <?= MAX_BK ?> yedek tutulur.</p>
+        <div id="upd-blist"><p style="color:#9ca3af;padding:14px;text-align:center">Yükleniyor…</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="upd-database" class="upd-body">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-database"></i> DATABASE MIGRATION</div>
+      <div class="upd-card-b">
+        <p style="color:#9ca3af;font-size:13px;margin-bottom:14px">Kod güncellemesinde otomatik çalışır. Manuel için butonu kullanın.</p>
+        <div class="upd-act" style="margin-bottom:18px">
+          <button class="upd-btn upd-btn-blue" onclick="updMigrate(this)"><i class="fa-solid fa-play"></i> Migration'ları Çalıştır</button>
+        </div>
+        <div id="upd-mlog" style="display:none;background:#0f172a;color:#cbd5e1;border-radius:8px;padding:12px;font-family:'SF Mono',Menlo,monospace;font-size:12px;max-height:300px;overflow-y:auto;line-height:1.8"></div>
+      </div>
+    </div>
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-clock-rotate-left"></i> GÜNCELLEME GEÇMİŞİ</div>
+      <div class="upd-card-b"><div id="upd-hist"><p style="color:#9ca3af;padding:14px;text-align:center">Yükleniyor…</p></div></div>
+    </div>
+  </div>
+
+  <div id="upd-settings" class="upd-body">
+    <div class="upd-card">
+      <div class="upd-card-h"><i class="fa-solid fa-gear"></i> AYARLAR</div>
+      <div class="upd-card-b">
+        <div class="upd-sect">GitHub Personal Access Token</div>
+        <p style="color:#6b7280;font-size:13px;line-height:1.7;margin-bottom:12px">
+          Yüksek rate-limit ve private repo erişimi için gerekli.<br>
+          GitHub → Settings → Developer settings → Personal access tokens → Fine-grained.<br>
+          Yetki: <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px">Contents: Read-only</code>
+        </p>
+        <div style="margin-bottom:10px">
+          <input type="password" id="upd-tok" class="upd-inp" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                 value="<?= $tok_tan ? str_repeat('•',8) . substr($tok_tan,-4) : '' ?>">
+        </div>
+        <div class="upd-act">
+          <button class="upd-btn upd-btn-blue upd-btn-sm" onclick="updSaveTok()"><i class="fa-solid fa-save"></i> Kaydet</button>
+          <button class="upd-btn upd-btn-ghost upd-btn-sm" onclick="updTestTok()"><i class="fa-solid fa-flask"></i> Test Et</button>
+          <span id="upd-tokmsg" style="font-size:12px;margin-left:8px"></span>
+        </div>
+        <div class="upd-sect">Korumalı Dosyalar</div>
+        <p style="color:#6b7280;font-size:12px;margin-bottom:10px">Bu yollar hiçbir güncellemede overwrite edilmez:</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px;font-family:'SF Mono',Menlo,monospace;font-size:11px;color:#6b7280">
+          <?php foreach (UPD_EXCLUDES as $ex): ?><div>• <?= htmlspecialchars($ex) ?></div><?php endforeach; ?>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="card">
-  <h2><i class="fa-solid fa-clock-rotate-left"></i> Güncelleme Geçmişi</h2>
-  <?php if (!$history): ?>
-    <div class="empty">Henüz güncelleme yapılmadı.</div>
-  <?php else: ?>
-    <table>
-      <thead><tr><th>#</th><th>Tarih</th><th>Sürüm</th><th>Durum</th><th>Detay</th></tr></thead>
-      <tbody>
-      <?php foreach ($history as $h): ?>
-        <tr>
-          <td><?= (int)$h['id'] ?></td>
-          <td style="font-size:11px"><?= format_date($h['created_at']) ?></td>
-          <td><strong>v<?= e($h['from_version']) ?></strong> → <strong>v<?= e($h['to_version']) ?></strong></td>
-          <td>
-            <span class="badge <?= $h['status']==='success'?'b-on':'b-off' ?>">
-              <?= $h['status']==='success' ? '✓ Başarılı' : '✗ Başarısız' ?>
-            </span>
-          </td>
-          <td>
-            <?php if (!empty($h['notes'])): ?>
-              <details>
-                <summary style="cursor:pointer;font-size:11px;color:#3A5F0B;font-weight:600">Logu görüntüle</summary>
-                <pre style="background:#f9fafb;padding:10px;font-size:10.5px;line-height:1.6;border-radius:6px;margin-top:6px;max-height:280px;overflow:auto;white-space:pre-wrap"><?= e($h['notes']) ?></pre>
-              </details>
-            <?php else: ?>—<?php endif; ?>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php endif; ?>
-</div>
+<div id="upd-ov"><div class="upd-ovbox">
+  <div class="upd-ov-head">
+    <div class="upd-ovicon" id="upd-ovicon">⚙️</div>
+    <div><div class="upd-ovtitle" id="upd-ovtitle">İşleniyor…</div><div class="upd-ovsub" id="upd-ovsub"></div></div>
+  </div>
+  <div class="upd-pbar"><div class="upd-pfill" id="upd-pfill"></div></div>
+  <div id="upd-ovlog"></div>
+  <div class="upd-ovact" id="upd-ovact"><button class="upd-btn upd-btn-blue" onclick="updOvClose()">Kapat</button></div>
+</div></div>
+
+<script>
+function $u(id){return document.getElementById(id);}
+function updToast(msg,c){var t=document.createElement('div');t.className='upd-toast';t.textContent=msg;
+  var cs={green:'background:#d1fae5;color:#065f46',red:'background:#fee2e2;color:#991b1b',blue:'background:#dbeafe;color:#1e40af'};
+  t.style.cssText+=cs[c]||cs.blue;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+function updTab(n,b){document.querySelectorAll('.upd-tab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.upd-body').forEach(t=>t.classList.remove('on'));if(b)b.classList.add('on');$u('upd-'+n)?.classList.add('on');
+  if(n==='commits')updLoadCommits();if(n==='backups')updLoadBackups();if(n==='database')updLoadHistory();}
+function updOv(i,t,s){$u('upd-ovicon').textContent=i;$u('upd-ovtitle').textContent=t;$u('upd-ovsub').textContent=s||'';$u('upd-ovlog').innerHTML='';$u('upd-pfill').style.width='5%';$u('upd-ovact').style.display='none';$u('upd-ov').className='show';}
+function updBar(p){$u('upd-pfill').style.width=Math.min(100,p)+'%';}
+function updOvLine(t,c){var d=document.createElement('div');d.className='ol-'+(c||'info');d.textContent=t;$u('upd-ovlog').appendChild(d);$u('upd-ovlog').scrollTop=99999;}
+function updOvDone(i,t,s){$u('upd-ovicon').textContent=i;$u('upd-ovtitle').textContent=t;$u('upd-ovsub').textContent=s||'';updBar(100);$u('upd-ovact').style.display='block';}
+function updOvClose(){$u('upd-ov').className='';}
+async function updFJ(u,o){var r=await fetch(u,Object.assign({credentials:'same-origin'},o||{}));var t=await r.text();if(!r.ok)throw new Error('HTTP '+r.status);try{return JSON.parse(t);}catch(e){throw new Error('JSON: '+t.substring(0,200));}}
+function updU(a){return '?upd_ajax='+a;}
+
+async function updCheck(){
+  $u('upd-btn-check').disabled=true;$u('upd-vbadge').innerHTML='<span class="upd-badge upd-b-blue"><i class="fa-solid fa-spinner fa-spin"></i> Kontrol…</span>';
+  try{
+    var d=await updFJ(updU('status'));
+    if(!d.ok){$u('upd-vbadge').innerHTML='<span class="upd-badge upd-b-red">❌ '+d.error+'</span>';return;}
+    $u('upd-vremote').textContent=d.remote_ver||'?';
+    $u('upd-sok').textContent=d.stats.ok;$u('upd-sdiff').textContent=d.stats.diff;$u('upd-smiss').textContent=d.stats.missing;$u('upd-stot').textContent=d.total;
+    $u('upd-vbadge').innerHTML=d.needs_update?'<span class="upd-badge upd-b-warn"><i class="fa-solid fa-triangle-exclamation"></i> '+(d.stats.diff+d.stats.missing)+' dosya güncel değil</span>':'<span class="upd-badge upd-b-green"><i class="fa-solid fa-check-circle"></i> Fully up to date</span>';
+    updRenderFiles(d.files);
+  }catch(e){$u('upd-vbadge').innerHTML='<span class="upd-badge upd-b-red">❌ '+e.message+'</span>';}
+  finally{$u('upd-btn-check').disabled=false;}
+}
+function updRenderFiles(files){
+  if(!files||!Object.keys(files).length){$u('upd-fgrid').innerHTML='';$u('upd-fmsg').textContent='Dosya yok';return;}
+  $u('upd-fmsg').style.display='none';
+  var I={ok:'✅',diff:'🔴',missing:'🟡'},C={ok:'f-ok',diff:'f-diff',missing:'f-miss'};
+  $u('upd-fgrid').innerHTML=Object.entries(files).map(function(e){
+    var f=e[0],s=e[1];
+    var b=(s.status==='diff'||s.status==='missing')?'<button class="upd-btn upd-btn-xs upd-btn-blue" onclick="updUpdOne(\''+f+'\',this)">Güncelle</button>':'';
+    return '<div class="upd-fitem '+C[s.status]+'" title="'+f+'">'+I[s.status]+'<span class="fn">'+f+'</span>'+b+'</div>';
+  }).join('');
+}
+async function updUpdOne(f,b){b.disabled=true;b.textContent='…';var fd=new FormData();fd.append('file',f);
+  try{var d=await updFJ(updU('update_file'),{method:'POST',body:fd});
+  if(d.ok){b.textContent='✅';updToast(f+' güncellendi','green');}else{b.textContent='❌';updToast(d.error,'red');}}
+  catch(e){b.textContent='❌';updToast(e.message,'red');}}
+
+async function updSync(){
+  if(!confirm('Akıllı Güncelleme:\nSadece değişen dosyalar indirilecek. Önce otomatik yedek alınır.\nDB migration varsa otomatik çalıştırılır.\n\nDevam?'))return;
+  updOv('⬆','Akıllı Güncelleme','GitHub ile senkronize ediliyor');$u('upd-btn-sync').disabled=true;updBar(20);updOvLine('🔗 GitHub bağlanıyor…','info');
+  try{var d=await updFJ(updU('sync'));updBar(85);
+    (d.log||[]).forEach(l=>updOvLine(l,l.startsWith('✅')?'ok':l.startsWith('❌')?'err':'info'));
+    (d.errors||[]).forEach(l=>updOvLine(l,'err'));
+    if(d.updated>0){updOvDone('✅','Tamamlandı!',d.updated+' dosya · v'+(d.version||'?'));$u('upd-vlocal').textContent=d.version||'?';
+      setTimeout(()=>{updOvClose();updCheck();updLoadBackups();},2500);}
+    else if((d.errors||[]).length>0){updOvDone('⚠️','Hatalarla tamamlandı','Log\'u kontrol edin');}
+    else{updOvDone('✨','Zaten Güncel','Tüm dosyalar GitHub ile eşleşiyor');setTimeout(updOvClose,2000);}
+  }catch(e){updOvLine('❌ '+e.message,'err');updOvDone('❌','Başarısız',e.message);}
+  finally{$u('upd-btn-sync').disabled=false;}
+}
+async function updForce(){
+  if(!confirm('⚠️ ZORLA GÜNCELLE\nTÜM dosyalar değişecek. Yerel değişiklikler kaybolur (önce yedek alınır).\nKorumalı dosyalar (config.php, uploads/) güvende.\n\nDevam?'))return;
+  if(!confirm('🔥 SON UYARI\nTüm yerel değişiklikler silinecek. Devam?'))return;
+  updOv('🔥','Zorla Güncelle','TÜM dosyalar yeniden indiriliyor');$u('upd-btn-force').disabled=true;updBar(15);updOvLine('🔗 GitHub…','info');
+  try{var d=await updFJ(updU('force_sync'));updBar(85);
+    (d.log||[]).forEach(l=>updOvLine(l,l.startsWith('✅')?'ok':l.startsWith('❌')?'err':'info'));
+    (d.errors||[]).forEach(l=>updOvLine(l,'err'));
+    updOvDone('✅','Tamamlandı!',d.updated+' dosya · v'+(d.version||'?'));
+    $u('upd-vlocal').textContent=d.version||'?';
+    setTimeout(()=>{updOvClose();updCheck();updLoadBackups();},2800);
+  }catch(e){updOvLine('❌ '+e.message,'err');updOvDone('❌','Başarısız',e.message);}
+  finally{$u('upd-btn-force').disabled=false;}
+}
+
+var _updCL=false;
+async function updLoadCommits(){
+  if(_updCL)return;
+  try{var d=await updFJ(updU('commits'));
+  if(!d.ok){$u('upd-clist').innerHTML='<div style="color:#dc2626;padding:14px">'+d.error+'</div>';return;}
+  if(!d.commits.length){$u('upd-clist').innerHTML='<div style="color:#9ca3af;padding:14px">Commit yok</div>';return;}
+  $u('upd-clist').innerHTML=d.commits.map(function(c){
+    var dt=c.date?new Date(c.date).toLocaleString('tr-TR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    var L=c.message.split('\n');var T=L[0];var B=L.slice(1).join('\n').trim();
+    return '<div class="upd-commit"><div style="display:flex;justify-content:space-between;gap:8px"><span class="upd-csha">'+c.sha+'</span><span class="upd-cmeta">'+dt+'</span></div><div class="upd-cmsg">'+T.replace(/</g,'&lt;')+'</div>'+(B?'<div style="font-size:12px;color:#6b7280;margin-top:3px;white-space:pre-wrap;line-height:1.6">'+B.replace(/</g,'&lt;')+'</div>':'')+'<div class="upd-cmeta">'+c.author+'</div></div>';
+  }).join('');_updCL=true;}
+  catch(e){$u('upd-clist').innerHTML='<div style="color:#dc2626;padding:14px">'+e.message+'</div>';}
+}
+
+async function updLoadBackups(){
+  try{var d=await updFJ(updU('backups'));var B=d.backups||[];
+  $u('upd-bkcnt').textContent='('+B.length+')';
+  if(!B.length){$u('upd-blist').innerHTML='<p style="color:#9ca3af;padding:14px;text-align:center">Henüz yedek yok</p>';return;}
+  $u('upd-blist').innerHTML=B.map(function(b){
+    var dt=new Date(b.time*1000).toLocaleString('tr-TR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var sz=b.size>1048576?(b.size/1048576).toFixed(1)+' MB':(b.size/1024).toFixed(0)+' KB';
+    return '<div class="upd-bk"><div style="min-width:0"><div class="upd-bk-name">'+b.name+'</div><div class="upd-bk-meta">'+dt+' · '+sz+' · v'+(b.ver||'?')+'</div></div><div style="display:flex;gap:5px;flex-shrink:0"><button class="upd-btn upd-btn-xs upd-btn-blue" onclick="updRestore(\''+b.name+'\')"><i class="fa-solid fa-rotate-left"></i> Geri Yükle</button><button class="upd-btn upd-btn-xs upd-btn-red" onclick="updDelBk(\''+b.name+'\',this)"><i class="fa-solid fa-trash"></i></button></div></div>';
+  }).join('');}
+  catch(e){$u('upd-blist').innerHTML='<div style="color:#dc2626;padding:14px">'+e.message+'</div>';}
+}
+async function updRestore(name){
+  if(!confirm('♻️ '+name+' yedeğinden geri yüklenecek. Mevcut durumun güvenlik yedeği alınır.\n\nDevam?'))return;
+  updOv('♻️','Geri Yükleniyor',name);updBar(15);updOvLine('📦 Güvenlik yedeği…','info');
+  try{var fd=new FormData();fd.append('backup',name);var d=await updFJ(updU('restore'),{method:'POST',body:fd});updBar(90);
+  (d.log||[]).forEach(l=>updOvLine(l,l.startsWith('✅')?'ok':l.startsWith('❌')?'err':'info'));
+  if(d.ok){updOvDone('✅','Tamam!',d.restored+' dosya');setTimeout(()=>{updOvClose();updCheck();updLoadBackups();},2500);}
+  else updOvDone('❌','Başarısız',d.error||'Hata');}
+  catch(e){updOvLine('❌ '+e.message,'err');updOvDone('❌','Başarısız',e.message);}
+}
+async function updDelBk(name,btn){if(!confirm('Silinsin mi?\n'+name))return;btn.disabled=true;var fd=new FormData();fd.append('backup',name);await updFJ(updU('delete_backup'),{method:'POST',body:fd});updToast('Silindi','red');updLoadBackups();}
+
+async function updMigrate(btn){
+  if(!confirm('DB migration\'ları çalıştırılacak. Devam?'))return;
+  btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Çalışıyor…';
+  $u('upd-mlog').style.display='block';$u('upd-mlog').innerHTML='<div style="color:#9ca3af">🔄 Çalışıyor…</div>';
+  try{var d=await updFJ(updU('migrate'));
+  $u('upd-mlog').innerHTML=(d.log||[]).map(l=>'<div>'+l+'</div>').join('');
+  updToast(d.ok?(d.new+' yeni migration uygulandı'):'Hata',d.ok?'green':'red');}
+  catch(e){$u('upd-mlog').innerHTML='<div style="color:#fca5a5">❌ '+e.message+'</div>';updToast(e.message,'red');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-play"></i> Migration\'ları Çalıştır';}
+}
+async function updLoadHistory(){
+  try{var d=await updFJ(updU('history'));
+  if(!d.ok||!d.history.length){$u('upd-hist').innerHTML='<div style="color:#9ca3af;padding:14px;text-align:center">Henüz güncelleme geçmişi yok</div>';return;}
+  $u('upd-hist').innerHTML=d.history.map(function(h){
+    var dt=new Date(h.installed_at.replace(' ','T')).toLocaleString('tr-TR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return '<div style="padding:10px 0;border-bottom:1px solid #e5e7eb"><div style="font-size:12px;font-family:\'SF Mono\',Menlo,monospace;color:'+(h.success==1?'#16a34a':'#dc2626')+';font-weight:700">v'+h.version+' · '+h.prev_version+' → '+h.version+'</div><div style="font-size:13px;margin-top:2px;color:#1f2937">'+(h.release_notes||'').replace(/</g,'&lt;')+'</div><div style="font-size:11px;color:#9ca3af">'+dt+'</div></div>';
+  }).join('');}
+  catch(e){$u('upd-hist').innerHTML='<div style="color:#dc2626;padding:14px">'+e.message+'</div>';}
+}
+async function updSaveTok(){
+  var v=$u('upd-tok').value.trim();
+  if(!v||v.includes('•')){updToast('Önce token girin','red');return;}
+  var fd=new FormData();fd.append('token',v);
+  try{var d=await updFJ(updU('save_token'),{method:'POST',body:fd});
+  $u('upd-tokmsg').innerHTML=d.ok?'<span style="color:#16a34a"><i class="fa-solid fa-check-circle"></i> Kaydedildi</span>':'<span style="color:#dc2626"><i class="fa-solid fa-xmark-circle"></i> Hata</span>';
+  if(d.ok)setTimeout(()=>location.reload(),1200);}
+  catch(e){updToast(e.message,'red');}
+}
+async function updTestTok(){
+  $u('upd-tokmsg').innerHTML='<span style="color:#3a5f0b"><i class="fa-solid fa-spinner fa-spin"></i> Test…</span>';
+  try{var d=await updFJ(updU('test_token'));
+  $u('upd-tokmsg').innerHTML=d.ok?'<span style="color:#16a34a"><i class="fa-solid fa-check-circle"></i> '+d.repo+'</span>':'<span style="color:#dc2626"><i class="fa-solid fa-xmark-circle"></i> '+d.error+'</span>';}
+  catch(e){$u('upd-tokmsg').innerHTML='<span style="color:#dc2626">❌ '+e.message+'</span>';}
+}
+updCheck();updLoadBackups();
+</script>
 
 <?php require __DIR__ . '/_footer.php'; ?>

@@ -1,23 +1,12 @@
-# Environment
-includes/config.php
-install.lock
-
-# Uploads (user content)
-uploads/*
-!uploads/.htaccess
-!uploads/*/
-
-# Logs / temp
-*.log
-*.tmp
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+.git/
+node_modules/
+*.bak
 fix-it.php
 fix-it2.php
 rename-files.php
 diagnostic.php
 updater.php
+db-fix.sql
+db-fix-v2.sql
+quick-fix.sql
+admin/.gh_token

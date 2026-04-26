@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,21 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.2.1",
+            "date": "2026-04-26",
+            "notes": [
+                "admin/update.php - Güncelleme Merkezi v5 (ERP'den port)",
+                "  6 sekme: Genel Durum, Dosyalar, Commits, Yedekler, Database, Ayarlar",
+                "  Git SHA dosya-bazlı karşılaştırma",
+                "  Smart Update / Force Update / Per-file update / Rollback",
+                "  Otomatik yedekleme + 10 yedek tutma",
+                "  cURL fallback file_get_contents (sunucuda cURL yoksa)",
+                "  Tüm AJAX hataları JSON yakalanıyor (HTML dönmesin)",
+                "  set_error_handler + set_exception_handler + global try-catch",
+                "  Migration sistemi entegre"
+            ]
+        },
         {
             "version": "1.2.0",
             "date": "2026-04-26",
