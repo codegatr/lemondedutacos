@@ -69,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
             throw new RuntimeException("Zaten en güncel sürümdesiniz ($current_ver).");
         }
 
-        // history kaydı oluştur
-        $pdo->prepare("INSERT INTO update_history (from_version, to_version, source, status) VALUES (?,?,?,?)")
-            ->execute([$current_ver, $newVer, 'github', 'started']);
+        // history kaydı oluştur (başlangıçta failed olarak; başarılı olursa update edilecek)
+        $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
+            ->execute([$current_ver, $newVer, 'failed', "Başlatıldı...", $cu['id']]);
         $hist_id = (int)$pdo->lastInsertId();
 
         // ZIP URL'ini bul (release assets içinde .zip ara, yoksa zipball_url)
@@ -160,18 +160,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         $cfgPath = __DIR__ . '/../includes/config.php';
         $cfg = @file_get_contents($cfgPath);
         if ($cfg !== false) {
-            $cfg = preg_replace("/const APP_VERSION = '[^']*';/", "const APP_VERSION = '" . $newVer . "';", $cfg, 1);
+            $cfg = preg_replace("/const\s+APP_VERSION\s*=\s*'[^']*';/", "const APP_VERSION  = '" . $newVer . "';", $cfg, 1);
             @file_put_contents($cfgPath, $cfg);
         }
 
         $duration = round(microtime(true) - $start, 2);
-        $pdo->prepare("UPDATE update_history SET status=?, log=?, duration_s=? WHERE id=?")
-            ->execute(['success', implode("\n", $log), $duration, $hist_id]);
+        $log[] = "Süre: $duration sn";
+        $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
+            ->execute(['success', implode("\n", $log), $hist_id]);
         log_activity('system_updated', null, "v$current_ver → v$newVer");
         flash_set('success', "Güncelleme tamamlandı: v$current_ver → v$newVer ($duration sn)");
     } catch (Throwable $ex) {
         if ($hist_id) {
-            $pdo->prepare("UPDATE update_history SET status=?, log=? WHERE id=?")
+            $pdo->prepare("UPDATE update_history SET status=?, notes=? WHERE id=?")
                 ->execute(['failed', implode("\n", $log) . "\nHATA: " . $ex->getMessage(), $hist_id]);
         }
         flash_set('error', 'Güncelleme başarısız: ' . $ex->getMessage());
@@ -234,7 +235,7 @@ $history = $pdo->query("SELECT * FROM update_history ORDER BY id DESC LIMIT 10")
     <div class="empty">Henüz güncelleme yapılmadı.</div>
   <?php else: ?>
     <table>
-      <thead><tr><th>#</th><th>Tarih</th><th>Sürüm</th><th>Durum</th><th>Süre</th><th>Log</th></tr></thead>
+      <thead><tr><th>#</th><th>Tarih</th><th>Sürüm</th><th>Durum</th><th>Notlar / Log</th></tr></thead>
       <tbody>
       <?php foreach ($history as $h): ?>
         <tr>
@@ -242,15 +243,14 @@ $history = $pdo->query("SELECT * FROM update_history ORDER BY id DESC LIMIT 10")
           <td><?= format_date($h['created_at']) ?></td>
           <td><?= e($h['from_version']) ?> → <?= e($h['to_version']) ?></td>
           <td>
-            <span class="badge <?= $h['status']==='success'?'b-on':($h['status']==='failed'?'b-off':'b-info') ?>">
+            <span class="badge <?= $h['status']==='success'?'b-on':'b-off' ?>">
               <?= e($h['status']) ?>
             </span>
           </td>
-          <td><?= $h['duration_s'] ? $h['duration_s'] . ' sn' : '—' ?></td>
           <td>
-            <?php if (!empty($h['log'])): ?>
+            <?php if (!empty($h['notes'])): ?>
               <details><summary style="cursor:pointer;font-size:11px;color:#3A5F0B">Görüntüle</summary>
-                <pre style="background:#f9fafb;padding:8px;font-size:10px;border-radius:4px;margin-top:4px;max-width:400px;overflow:auto"><?= e($h['log']) ?></pre>
+                <pre style="background:#f9fafb;padding:8px;font-size:10px;border-radius:4px;margin-top:4px;max-width:400px;overflow:auto"><?= e($h['notes']) ?></pre>
               </details>
             <?php else: ?>—<?php endif; ?>
           </td>

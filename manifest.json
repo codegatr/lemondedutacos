@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,15 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.2",
+            "date": "2026-04-26",
+            "notes": [
+                "Düzeltme: admin/update.php update_history tablosunda olmayan kolonları kullanıyordu",
+                "Log + süre bilgileri notes kolonuna birleştirildi (schema değişikliği yok)",
+                "APP_VERSION regex whitespace toleranslı"
+            ]
+        },
         {
             "version": "1.0.1",
             "date": "2026-04-26",
