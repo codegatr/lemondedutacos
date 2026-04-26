@@ -256,6 +256,11 @@ function log_activity(string $action, ?int $admin_id = null, ?string $detail = n
 /* ================== URL / TARİH ================== */
 
 function url(string $path = ''): string {
+    return '/' . ltrim($path, '/');
+}
+
+/** Absolute URL — sadece e-posta, RSS, sitemap gibi domain-bound çıktılar için. */
+function absolute_url(string $path = ''): string {
     return SITE_URL . '/' . ltrim($path, '/');
 }
 
@@ -269,12 +274,17 @@ function format_date(string $datetime, string $fmt = 'd.m.Y H:i'): string {
 
 /* ================== ASSETS ================== */
 
+/**
+ * Görsel/dosya yolu — TARAYICI tarafından çözülecek RELATIF path döner.
+ * Domain'den bağımsızdır — site v2.lemondedutacos.com'da, lemondedutacos.com'da
+ * veya başka herhangi bir domain'de barındırılırken aynı çalışır.
+ */
 function asset(?string $path): string {
     if (!$path) return '';
-    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
         return $path;
     }
-    return SITE_URL . '/' . ltrim($path, '/');
+    return '/' . ltrim($path, '/');
 }
 
 /* ================== SAYFALAMA ================== */

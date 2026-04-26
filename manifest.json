@@ -12,6 +12,19 @@
             "version": "1.0.5",
             "date": "2026-04-26",
             "notes": [
+                "KRİTİK: asset() fonksiyonu domain-bağımsız relative path döner",
+                "  Site v2.lemondedutacos.com'da, lemondedutacos.com'da veya başka",
+                "  herhangi bir domain'de aynı çalışır - SITE_URL prefix'i kaldırıldı",
+                "  E-posta gibi absolute URL gerektiren yerler için absolute_url() eklendi",
+                "subeler.php: server-render fallback - JS yüklenmeden de içerik görünür",
+                "subeler.php: adres satırları akıllı bölme (4+ virgül = 3 satır)",
+                "url() fonksiyonu da relative path döner"
+            ]
+        },
+        {
+            "version": "1.0.5",
+            "date": "2026-04-26",
+            "notes": [
                 "KRİTİK FIX: Güncelleme sonrası boş sayfa sorunu çözüldü",
                 "  - admin/update.php: POST handler artık _header.php'den ÖNCE çalışıyor",
                 "  - Önceden header('Location:') çağrısı _header.php HTML çıktısından sonra geliyor ve sessizce başarısız oluyordu",

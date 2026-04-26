@@ -884,13 +884,28 @@ $branches = db()->query(
     <div class="hero-grid">
 
       <?php foreach ($branches as $b):
-        $lines = str_replace([',', "\n"], '|', $b['address']);
+        // Adres çok uzunsa ", " ile bölüp ilk kısmı başlık altına koy, gerisini birleştir
+        $addr = trim($b['address'] ?? '');
+        $parts = array_map('trim', explode(',', $addr));
+        // İlk 2-3 parçayı 1. satır, geri kalanını 2. satır yap
+        if (count($parts) >= 4) {
+          $line1 = implode(', ', array_slice($parts, 0, 2));
+          $line2 = implode(', ', array_slice($parts, 2, count($parts) - 3));
+          $line3 = end($parts);
+          $lines = trim($line1) . '|' . trim($line2) . '|' . trim($line3);
+        } elseif (count($parts) >= 2) {
+          $line1 = $parts[0];
+          $line2 = implode(', ', array_slice($parts, 1));
+          $lines = trim($line1) . '|' . trim($line2);
+        } else {
+          $lines = $addr;
+        }
       ?>
       <div class="grid-box"
            data-map="<?= e($b['map_url'] ?: '#') ?>"
            data-title="<?= e($b['title']) ?>"
            data-lines="<?= e($lines) ?>">
-        <div class="type-target"></div>
+        <div class="type-target"><strong><?= e($b['title']) ?></strong><br><?= nl2br(e(str_replace('|', "\n", $lines))) ?></div>
       </div>
       <?php endforeach; ?>
 
