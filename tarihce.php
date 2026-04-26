@@ -232,14 +232,38 @@
 <footer class="footer">
   <ul class="social-nav model-2" aria-label="Sosyal medya">
     <li><a class="facebook" href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a></li>
-    <li><a class="instagram" href="https://www.instagram.com/lemondedutacos__?igsh=MWIzMDRzaWw0azhkbA%3D%3D" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a></li>
+    <li><a class="instagram" href="https://www.instagram.com/lemondedutacos__?igsh=MWIzMDRzaWw0azhkbA%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a></li>
     <li><a class="twitter" href="#" aria-label="Twitter/X"><i class="fa-brands fa-x-twitter"></i></a></li>
     <li><a class="youtube" href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a></li>
   </ul>
-  <div style="font-weight:bold;font-family:'Georgia',serif;">
-    Copyright © 2026 <span style="font-style:italic;text-decoration:underline;">Tüm Hakları Saklıdır</span>
+  <nav class="footer-legal" aria-label="Yasal sayfalar">
+    <a href="/kvkk.php">KVKK</a>
+    <span>·</span>
+    <a href="/cerez-politikasi.php">Çerez Politikası</a>
+    <span>·</span>
+    <a href="/gizlilik-politikasi.php">Gizlilik Politikası</a>
+  </nav>
+  <div class="footer-meta">
+    <div style="font-weight:bold;font-family:'Georgia',serif;">
+      Copyright © 2026 <span style="font-style:italic;text-decoration:underline;">Tüm Hakları Saklıdır</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+      Tasarım &amp; Geliştirme: <a href="https://www.codega.com.tr" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700;text-decoration:none;">CODEGA</a>
+    </div>
   </div>
 </footer>
+<style>
+.footer{flex-wrap:wrap;}
+.footer-legal{display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap;justify-content:center;}
+.footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s;}
+.footer-legal a:hover{color:var(--brand);text-decoration:underline;}
+.footer-legal span{color:var(--muted);opacity:.5;}
+.footer-meta{display:flex;flex-direction:column;align-items:flex-end;text-align:right;}
+@media(max-width:940px){
+  .footer{flex-direction:column;gap:10px;text-align:center;}
+  .footer-meta{align-items:center;text-align:center;}
+}
+</style>
 
 <script>
   const btn=document.getElementById("hamburger");
