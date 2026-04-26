@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,16 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.2.2",
+            "date": "2026-04-26",
+            "notes": [
+                "Footer CSS düzeltmesi — anasayfa ile diğer sayfalar artık birebir aynı",
+                "Sosyal ikonlar ve copyright kendi genişliklerinde (flex:0 0 auto)",
+                "KVKK linkleri tek satırda, ortada esnek genişler (flex:1 1 auto)",
+                "kurumsal.php ile birebir aynı flex davranışı"
+            ]
+        },
         {
             "version": "1.2.1",
             "date": "2026-04-26",

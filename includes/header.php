@@ -58,9 +58,10 @@ button{font:inherit}
 
 /* ===== FOOTER ===== */
 .footer{max-width:1280px;margin:0 auto;padding:22px 36px 26px;display:flex;align-items:center;justify-content:space-between;gap:48px;color:var(--muted);font-size:12px;flex-wrap:wrap}
-.footer > *{flex:1 1 0;display:flex;align-items:center}
+.footer > .social-nav,.footer > .footer-meta{flex:0 0 auto;display:flex;align-items:center}
+.footer > .footer-legal{flex:1 1 auto;display:flex;align-items:center;min-width:0}
 .footer > .social-nav{justify-content:flex-start}
-.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
 .footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
 .footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
 .footer-legal a:hover{color:var(--brand);text-decoration:underline}
