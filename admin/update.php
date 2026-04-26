@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
-$page_h = 'Sistem Güncelleme';
-require __DIR__ . '/_header.php';
+
+require_once __DIR__ . '/../includes/functions.php';
+admin_require();
 
 $cu = admin_user();
 if ($cu['role'] !== 'superadmin') {
@@ -34,20 +35,12 @@ function ver_compare(string $a, string $b): int
     return version_compare(ltrim($a, 'v'), ltrim($b, 'v'));
 }
 
+/* === ÖNEMLİ: TÜM POST İŞLEMLERİ HTML ÇIKTISINDAN ÖNCE === */
+/* _header.php require'ı bu bloktan SONRA olmak zorunda; yoksa header('Location:') sessizce ölür. */
+
 $action = $_POST['action'] ?? '';
 $current_ver = APP_VERSION;
-$latest = null;
-$check_error = null;
 
-/* Sürüm bilgisi (her zaman çek) */
-$r = fetch_latest_release();
-if (isset($r['error'])) {
-    $check_error = $r['error'];
-} else {
-    $latest = $r;
-}
-
-/* GÜNCELLEME UYGULA */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
     csrf_required();
 
@@ -60,14 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
 
     try {
         $log[] = "Sürüm bilgisi alınıyor...";
-        if (!$latest) throw new RuntimeException($check_error ?: 'Sürüm bilgisi alınamadı.');
+        $r = fetch_latest_release();
+        if (isset($r['error'])) throw new RuntimeException($r['error']);
+        $latest = $r;
         $newVer = ltrim($latest['tag_name'], 'v');
 
         if (ver_compare($newVer, $current_ver) <= 0) {
             throw new RuntimeException("Zaten en güncel sürümdesiniz ($current_ver).");
         }
 
-        // History kaydı oluştur (failed default; başarılı olursa update edilecek)
+        // History kaydı oluştur
         $pdo->prepare("INSERT INTO update_history (from_version, to_version, status, notes, admin_id) VALUES (?,?,?,?,?)")
             ->execute([$current_ver, $newVer, 'failed', "Başlatıldı...", $cu['id']]);
         $hist_id = (int)$pdo->lastInsertId();
@@ -76,19 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         $zipUrl = null;
         foreach (($latest['assets'] ?? []) as $a) {
             if (str_ends_with(strtolower($a['name'] ?? ''), '.zip')) {
-                $zipUrl = $a['browser_download_url'];
-                break;
+                $zipUrl = $a['browser_download_url']; break;
             }
         }
         if (!$zipUrl) $zipUrl = $latest['zipball_url'];
-
         $log[] = "İndiriliyor: " . parse_url($zipUrl, PHP_URL_PATH);
 
         // İndir
         $tmpZip = sys_get_temp_dir() . "/lmdt_upd_" . bin2hex(random_bytes(4)) . ".zip";
-        $headers = ["User-Agent: lemondedutacos-updater"];
-        if (GITHUB_TOKEN !== '') $headers[] = "Authorization: Bearer " . GITHUB_TOKEN;
-        $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$headers),'timeout'=>120,'follow_location'=>1]]);
+        $hh = ["User-Agent: lemondedutacos-updater"];
+        if (GITHUB_TOKEN !== '') $hh[] = "Authorization: Bearer " . GITHUB_TOKEN;
+        $ctx = stream_context_create(['http' => ['method'=>'GET','header'=>implode("\r\n",$hh),'timeout'=>120,'follow_location'=>1]]);
         $bytes = @file_get_contents($zipUrl, false, $ctx);
         if ($bytes === false) throw new RuntimeException("ZIP indirilemedi.");
         file_put_contents($tmpZip, $bytes);
@@ -103,14 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         $zip->close();
         @unlink($tmpZip);
 
-        // Tek bir kök klasör varsa onu kullan
         $contents = array_values(array_diff(scandir($tmpDir), ['.', '..']));
         $extractRoot = $tmpDir;
         if (count($contents) === 1 && is_dir($tmpDir . '/' . $contents[0])) {
             $extractRoot = $tmpDir . '/' . $contents[0];
         }
 
-        // Korunacak dizinler/dosyalar
         $protect = ['uploads', 'install.lock', 'includes/config.php'];
         $isProtected = function (string $rel) use ($protect): bool {
             foreach ($protect as $p) {
@@ -121,10 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
 
         $rootDir = realpath(__DIR__ . '/..');
         $copied = 0;
-        $copyDir = function (string $src, string $dst, string $rel = '') use (&$copyDir, &$copied, $isProtected) {
+        $touched = [];
+        $copyDir = function (string $src, string $dst, string $rel = '') use (&$copyDir, &$copied, &$touched, $isProtected) {
             if (!is_dir($dst)) @mkdir($dst, 0755, true);
-            $items = array_diff(scandir($src), ['.', '..']);
-            foreach ($items as $item) {
+            foreach (array_diff(scandir($src), ['.', '..']) as $item) {
                 $sp = $src . '/' . $item;
                 $dp = $dst . '/' . $item;
                 $r2 = $rel === '' ? $item : ($rel . '/' . $item);
@@ -132,7 +123,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
                 if (is_dir($sp)) {
                     $copyDir($sp, $dp, $r2);
                 } else {
-                    if (@copy($sp, $dp)) $copied++;
+                    if (@copy($sp, $dp)) {
+                        $copied++;
+                        $touched[] = $dp;
+                    }
                 }
             }
         };
@@ -151,15 +145,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         };
         $rmDir($tmpDir);
 
-        // version.txt güncelle
+        // version.txt
         @file_put_contents(__DIR__ . '/../version.txt', $newVer);
 
-        // config.php içindeki APP_VERSION güncelle (whitespace toleranslı)
+        // config.php — APP_VERSION güncelle
         $cfgPath = __DIR__ . '/../includes/config.php';
         $cfg = @file_get_contents($cfgPath);
         if ($cfg !== false) {
             $cfg = preg_replace("/const\s+APP_VERSION\s*=\s*'[^']*';/", "const APP_VERSION  = '" . $newVer . "';", $cfg, 1);
             @file_put_contents($cfgPath, $cfg);
+        }
+
+        // OPcache: kopyalanan PHP dosyalarını invalidate et (yoksa eski bytecode çalışır)
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($cfgPath, true);
+            foreach ($touched as $tp) {
+                if (str_ends_with($tp, '.php')) @opcache_invalidate($tp, true);
+            }
         }
 
         $duration = round(microtime(true) - $start, 2);
@@ -168,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
             ->execute(['success', implode("\n", $log), $hist_id]);
         log_activity('system_updated', null, "v$current_ver → v$newVer");
 
-        // PRG: yenilenen sayfada başarı ekranını göstermek için redirect
+        // PRG redirect — bu noktada ÇIKTI VERİLMEDİ, header() çalışacak
         header('Location: update.php?completed=1&from=' . urlencode($current_ver) . '&to=' . urlencode($newVer) . '&dur=' . $duration);
         exit;
     } catch (Throwable $ex) {
@@ -179,6 +181,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
         flash_set('error', 'Güncelleme başarısız: ' . $ex->getMessage());
         header('Location: update.php'); exit;
     }
+}
+
+/* === Buradan sonra HTML render başlıyor === */
+$page_h = 'Sistem Güncelleme';
+require __DIR__ . '/_header.php';
+
+/* Sürüm bilgisi (her zaman çek - render aşaması) */
+$latest = null;
+$check_error = null;
+$r = fetch_latest_release();
+if (isset($r['error'])) {
+    $check_error = $r['error'];
+} else {
+    $latest = $r;
 }
 
 /* Başarı ekranı (PRG sonrası) */
@@ -221,7 +237,6 @@ $has_update = $latest && ver_compare(ltrim($latest['tag_name'], 'v'), $current_v
 </div>
 
 <script>
-// Animasyon: dairenin dolması + tick'in fade-in
 setTimeout(()=>{
   const c=document.getElementById('success-circle');
   if(c) c.style.strokeDashoffset='0';
@@ -233,7 +248,6 @@ setTimeout(()=>{
 </script>
 <?php endif; ?>
 
-<?php /* Sürüm bilgisi kartları */ ?>
 <div class="grid-2">
   <div class="metric">
     <div class="lbl">Mevcut Sürüm</div>
@@ -310,14 +324,10 @@ setTimeout(()=>{
 <script>
 function startUpdate(form) {
   if (!confirm('Güncellemeyi başlatmak üzeresiniz. Devam edilsin mi?\n\nİşlem 10-30 saniye sürebilir, sayfayı kapatmayın.')) return false;
-
   const btn = document.getElementById('update-btn');
   btn.disabled = true;
   document.getElementById('update-progress').style.display = 'block';
-
-  // Bar 8 saniyede %95'e gider, sunucu cevabı dönünce yenilenmiş sayfa zaten %100 yeşil banner gösterir
   setTimeout(() => { document.getElementById('update-bar').style.width = '95%'; }, 80);
-
   const stages = [
     [0,    '🔗 GitHub API\'ye bağlanılıyor...'],
     [1500, '📦 ZIP paketi indiriliyor...'],
@@ -327,25 +337,22 @@ function startUpdate(form) {
   ];
   const txt = document.getElementById('update-msg-text');
   stages.forEach(([t, m]) => setTimeout(() => { txt.textContent = m; }, t));
-
   return true;
 }
 </script>
 <?php endif; ?>
 
-<?php /* GitHub repo bilgisi */ ?>
 <div class="card">
   <h2><i class="fa-brands fa-github"></i> GitHub Repo</h2>
   <table>
     <tr><th style="width:160px">Owner</th><td><code><?= e(GITHUB_OWNER) ?></code></td></tr>
     <tr><th>Repo</th><td><code><?= e(GITHUB_REPO) ?></code></td></tr>
-    <tr><th>Token</th><td><?= GITHUB_TOKEN ? '<span class="badge b-on">Tanımlı</span> (private repo desteği aktif)' : '<span class="badge b-info">Yok</span> (public repo)' ?></td></tr>
+    <tr><th>Token</th><td><?= GITHUB_TOKEN ? '<span class="badge b-on">Tanımlı</span>' : '<span class="badge b-info">Yok</span>' ?></td></tr>
     <tr><th>Repo URL</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>" target="_blank">github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?></a></td></tr>
     <tr><th>Releases</th><td><a href="https://github.com/<?= e(GITHUB_OWNER) ?>/<?= e(GITHUB_REPO) ?>/releases" target="_blank">Tüm sürümleri gör →</a></td></tr>
   </table>
 </div>
 
-<?php /* Geçmiş güncellemeler */ ?>
 <div class="card">
   <h2><i class="fa-solid fa-clock-rotate-left"></i> Güncelleme Geçmişi</h2>
   <?php if (!$history): ?>

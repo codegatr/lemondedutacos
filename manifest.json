@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,21 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.5",
+            "date": "2026-04-26",
+            "notes": [
+                "KRİTİK FIX: Güncelleme sonrası boş sayfa sorunu çözüldü",
+                "  - admin/update.php: POST handler artık _header.php'den ÖNCE çalışıyor",
+                "  - Önceden header('Location:') çağrısı _header.php HTML çıktısından sonra geliyor ve sessizce başarısız oluyordu",
+                "  - Şimdi PRG redirect düzgün çalışıyor",
+                "OPcache invalidation eklendi - güncelleme sonrası tüm kopyalanan PHP'ler invalidate ediliyor",
+                "  - Eski bytecode artık sürüm değişikliği sonrası bekletilmiyor",
+                "Form sayfalarında flash_get() çağrı düzeltmesi (iletisim, franchise, insan-kaynaklari)",
+                "  - flash_get('success') -> foreach (flash_get() as $f)",
+                "  - flash_get parametresiz fonksiyon - TypeError önlendi"
+            ]
+        },
         {
             "version": "1.0.4",
             "date": "2026-04-26",

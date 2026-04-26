@@ -798,8 +798,11 @@ $branches = db()->query("SELECT id, title FROM branches WHERE is_active = 1 ORDE
       </nav>
     </div>
   </header>
-<?php if ($f = flash_get('success')): ?><div style="position:fixed;top:20px;right:20px;z-index:9999;background:#16a34a;color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:600"><?= e($f) ?></div><?php endif; ?>
-<?php if ($f = flash_get('error')): ?><div style="position:fixed;top:20px;right:20px;z-index:9999;background:#dc2626;color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:600"><?= e($f) ?></div><?php endif; ?>
+<?php foreach (flash_get() as $f):
+  $bg = $f['type'] === 'success' ? '#16a34a' : ($f['type'] === 'error' ? '#dc2626' : '#3a5f0b');
+?>
+<div style="position:fixed;top:20px;right:20px;z-index:9999;background:<?= $bg ?>;color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);font-weight:600;max-width:360px"><?= e($f['msg']) ?></div>
+<?php endforeach; ?>
 
 
   <!-- HERO -->
