@@ -207,6 +207,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       width:104vw;
       margin-left:calc(50% - 52vw);
       z-index:999;
+      /* Auto-resize: dar ekranlarda tüm hero+form bloğunu orantılı küçült.
+         zoom transform chain'i etkilemez, yatay layout korunur. */
+      zoom: clamp(0.62, calc((100vh - 164px) / 720), 1);
     }
     .hero::after{
       content:"";

@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,20 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.2.6",
+            "date": "2026-04-26",
+            "notes": [
+                "İletişim ve Franchise: CSS zoom ile dinamik auto-resize",
+                "  .hero'ya zoom: clamp(0.62, calc((100vh - 164px) / 720), 1)",
+                "  Yatay layout, hero rotation, kart konumu, transform chain - HEPSİ KORUNDU",
+                "  zoom property transform'dan bağımsız çalışır, translate %50 hesabını bozmaz",
+                "  Yükseklik 720px+: zoom=1 (orijinal)",
+                "  Yükseklik 600px: zoom~0.83 (form %17 küçülür)",
+                "  Yükseklik 500px: zoom~0.69",
+                "  Min sınır 0.62 (çok küçülmesin)"
+            ]
+        },
         {
             "version": "1.2.5",
             "date": "2026-04-26",
