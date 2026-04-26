@@ -319,27 +319,39 @@ setTimeout(()=>{
   </form>
 </div>
 
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+<style>@keyframes spin-r{to{transform:rotate(360deg)}}</style>
 
 <script>
 function startUpdate(form) {
-  if (!confirm('Güncellemeyi başlatmak üzeresiniz. Devam edilsin mi?\n\nİşlem 10-30 saniye sürebilir, sayfayı kapatmayın.')) return false;
+  if (!confirm('Güncellemeyi başlatmak üzeresiniz. Devam edilsin mi?\n\nİşlem 15-45 saniye sürebilir, sayfayı kapatmayın.')) return false;
   const btn = document.getElementById('update-btn');
-  btn.disabled = true;
-  document.getElementById('update-progress').style.display = 'block';
-  setTimeout(() => { document.getElementById('update-bar').style.width = '95%'; }, 80);
-  const stages = [
-    [0,    '🔗 GitHub API\'ye bağlanılıyor...'],
-    [1500, '📦 ZIP paketi indiriliyor...'],
-    [3500, '📂 Dosyalar açılıp kopyalanıyor...'],
-    [6000, '🔧 Sürüm bilgileri güncelleniyor...'],
-    [7500, '✅ Tamamlanıyor...'],
-  ];
   const txt = document.getElementById('update-msg-text');
+  document.getElementById('update-progress').style.display = 'block';
+
+  // Progress bar: 30 saniyede %92'ye ulaşır - sunucu cevabı gelene kadar
+  setTimeout(() => { document.getElementById('update-bar').style.width = '92%'; }, 80);
+
+  const stages = [
+    [0,     '🔗 GitHub API\'ye bağlanılıyor...'],
+    [2000,  '📦 Sürüm paketi indiriliyor...'],
+    [5000,  '📂 ZIP açılıyor...'],
+    [9000,  '🗂 Dosyalar kopyalanıyor (uploads ve config korunuyor)...'],
+    [15000, '🔧 Sürüm bilgileri güncelleniyor...'],
+    [22000, '✅ Son kontroller yapılıyor...'],
+    [28000, '⏱ Az kaldı, sayfa otomatik yenilenecek...'],
+  ];
   stages.forEach(([t, m]) => setTimeout(() => { txt.textContent = m; }, t));
+
+  // Buton'u submit'ten SONRA disable et (bazı browserlar disable submit'i engelliyor)
+  setTimeout(() => { btn.disabled = true; btn.style.opacity = '0.6'; }, 100);
+
   return true;
 }
 </script>
+<style>
+@keyframes spin{to{transform:rotate(360deg)}}
+#update-bar{transition:width 30s linear !important}
+</style>
 <?php endif; ?>
 
 <div class="card">

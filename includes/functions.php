@@ -278,13 +278,28 @@ function format_date(string $datetime, string $fmt = 'd.m.Y H:i'): string {
  * Görsel/dosya yolu — TARAYICI tarafından çözülecek RELATIF path döner.
  * Domain'den bağımsızdır — site v2.lemondedutacos.com'da, lemondedutacos.com'da
  * veya başka herhangi bir domain'de barındırılırken aynı çalışır.
+ *
+ * Türkçe karakterler ve boşluklar otomatik URL-encode edilir, böylece
+ * "seçilmiş.png" gibi dosya isimleri tüm sunucularda sorunsuz çalışır.
  */
 function asset(?string $path): string {
     if (!$path) return '';
     if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
         return $path;
     }
-    return '/' . ltrim($path, '/');
+    // Query string'i ayır (sonradan ekleriz, encode etmeyiz)
+    $qs = '';
+    if (($q = strpos($path, '?')) !== false) {
+        $qs = substr($path, $q);
+        $path = substr($path, 0, $q);
+    }
+    $path = '/' . ltrim($path, '/');
+    // Her segmenti URL-encode et (slash'lar arası)
+    $segments = explode('/', $path);
+    $encoded = array_map(static function ($s) {
+        return $s === '' ? '' : rawurlencode($s);
+    }, $segments);
+    return implode('/', $encoded) . $qs;
 }
 
 /* ================== SAYFALAMA ================== */

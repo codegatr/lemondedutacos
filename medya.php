@@ -185,12 +185,12 @@
         </div>
 
         <div class="photo-item" onclick="openLb(this)">
-          <img src="/static/img/yeni/seçilmişlezzetler_1x1.png" onerror="this.src='/static/img/yeni/imzalilezzetler1x1.png'" alt="Şube İç Mekan">
+          <img src="/static/img/yeni/se%C3%A7ilmi%C5%9Flezzetler_1x1.png" onerror="this.src='/static/img/yeni/imzalilezzetler1x1.png'" alt="Şube İç Mekan">
           <div class="photo-caption">Şube Konsepti</div>
         </div>
 
         <div class="photo-item" onclick="openLb(this)">
-          <img src="/static/img/yeni/imzalilezzetler1x1.png" onerror="this.src='/static/img/yeni/seçilmişlezzetler_1x1.png'" alt="İmzalı Lezzetler">
+          <img src="/static/img/yeni/imzalilezzetler1x1.png" onerror="this.src='/static/img/yeni/se%C3%A7ilmi%C5%9Flezzetler_1x1.png'" alt="İmzalı Lezzetler">
           <div class="photo-caption">İmzalı Lezzetler</div>
         </div>
 

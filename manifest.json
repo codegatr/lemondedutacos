@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,21 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.7",
+            "date": "2026-04-26",
+            "notes": [
+                "asset() fonksiyonu Türkçe karakterleri otomatik URL-encode eder",
+                "  Örnek: /static/img/yeni/seçilmiş.png → /static/img/yeni/se%C3%A7ilmi%C5%9F.png",
+                "  Bu sayede tüm sunucularda Türkçe dosya isimleri sorunsuz çalışır",
+                "Tüm hardcoded Türkçe karakterli görsel referansları encoded edildi (medya.php)",
+                "asset() artık query string'leri korur (?v=1 gibi)",
+                "admin/update.php progress bar 30 saniyeye çıkarıldı (uzun güncellemeler için)",
+                "  - 7 aşamalı detaylı mesajlar (15-45 sn arası gerçekçi)",
+                "  - Buton submit'ten SONRA disable olur (browser uyumluluğu için)",
+                "  - Spinner animasyonu izole edildi (CSS çakışması önlendi)"
+            ]
+        },
         {
             "version": "1.0.6",
             "date": "2026-04-26",
