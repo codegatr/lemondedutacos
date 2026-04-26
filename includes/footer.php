@@ -50,7 +50,7 @@
 .footer > .footer-legal{flex:1 1 auto;display:flex;align-items:center;min-width:0}
 .footer > .social-nav{justify-content:flex-start}
 .footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
-.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;white-space:nowrap}
 .footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
 .footer-legal a:hover{color:var(--brand);text-decoration:underline}
 .footer-legal span{color:var(--muted);opacity:.5}

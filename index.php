@@ -28,10 +28,10 @@ $page_title = setting('site_name', SITE_NAME);
 $page_desc  = setting('site_tagline', '');
 $extra_css  = "
 html,body{max-width:100%;overflow-x:hidden}
-body{overflow:hidden;display:flex;flex-direction:column;height:100vh;height:100dvh}
-.topbar{flex-shrink:0}
-.hero{position:relative;flex:1 1 0;min-height:0;background:#000;overflow:hidden}
-.footer{flex-shrink:0}
+body{overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh;min-height:0}
+.topbar{min-height:0}
+.hero{position:relative;background:#000;overflow:hidden;min-height:0}
+.footer{min-height:0}
 .hero-slider{position:relative;width:100%;height:100%;overflow:hidden}
 .hero-slide{position:absolute;inset:0;opacity:0;transition:opacity .8s}
 .hero-slide.active{opacity:1}

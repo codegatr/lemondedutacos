@@ -12,6 +12,18 @@
             "version": "1.2.2",
             "date": "2026-04-26",
             "notes": [
+                "Anasayfa footer düzeltildi (kurumsal/iletişim ile birebir aynı)",
+                "  Body flex layout → CSS Grid (3 satır: header/hero/footer)",
+                "  Footer max-width:1280px artık doğru hesaplanıyor",
+                "  KVKK/Çerez/Gizlilik tek satır",
+                "  Copyright tek satır (white-space:nowrap)",
+                "Tek-ekran layout korundu (kaydırma yok)"
+            ]
+        },
+        {
+            "version": "1.2.2",
+            "date": "2026-04-26",
+            "notes": [
                 "Footer CSS düzeltmesi — anasayfa ile diğer sayfalar artık birebir aynı",
                 "Sosyal ikonlar ve copyright kendi genişliklerinde (flex:0 0 auto)",
                 "KVKK linkleri tek satırda, ortada esnek genişler (flex:1 1 auto)",
