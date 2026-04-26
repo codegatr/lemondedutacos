@@ -971,10 +971,10 @@ $branches = db()->query("SELECT id, title FROM branches WHERE is_active = 1 ORDE
 </footer>
 <style>
 .footer{max-width:1280px !important;margin:0 auto !important;padding:22px 36px 26px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:48px !important;flex-wrap:wrap}
-.footer > *{flex:1 1 0;display:flex;align-items:center}
+.footer > .social-nav,.footer > .footer-meta{flex:0 0 auto;display:flex;align-items:center}.footer > .footer-legal{flex:1 1 auto;display:flex;align-items:center;min-width:0}
 .footer > .social-nav{justify-content:flex-start}
-.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
-.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
+.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;white-space:nowrap}
 .footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
 .footer-legal a:hover{color:var(--brand);text-decoration:underline}
 .footer-legal span{color:var(--muted);opacity:.5}

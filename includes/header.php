@@ -60,8 +60,11 @@ button{font:inherit}
 .footer{max-width:1280px;margin:0 auto;padding:22px 36px 26px;display:flex;align-items:center;justify-content:space-between;gap:48px;color:var(--muted);font-size:12px;flex-wrap:wrap}
 .footer > *{flex:1 1 0;display:flex;align-items:center}
 .footer > .social-nav{justify-content:flex-start}
-.footer > .footer-legal{justify-content:center}
-.footer > .footer-meta{justify-content:flex-end}
+.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
+.footer-legal a:hover{color:var(--brand);text-decoration:underline}
+.footer-legal span{color:var(--muted);opacity:.5}
 .social-nav{padding:0;margin:0;list-style:none;display:flex;align-items:center;gap:10px}
 .social-nav li{display:inline-block}
 .social-nav a{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;text-decoration:none;background:#000;border-radius:8px;transition:.35s ease;overflow:hidden;font-size:18px}
@@ -89,9 +92,10 @@ button{font:inherit}
   .nav{position:absolute;top:58px;right:12px;left:12px;background:#fff;border:1px solid rgba(0,0,0,.10);border-radius:14px;box-shadow:var(--shadow);padding:10px;display:none;flex-direction:column;align-items:stretch;gap:6px;z-index:9998}
   .nav.open{display:flex}
   .nav a{padding:12px}
-  .footer{flex-direction:column;text-align:center;gap:14px;padding:18px 16px;max-width:100%}
-  .footer > *{flex:none;justify-content:center !important;width:100%}
-  .footer > .footer-meta{align-items:center !important}
+  .footer{flex-direction:column;text-align:center;gap:12px;padding:16px;max-width:100%;flex-wrap:wrap}
+  .footer > *{flex:none !important;justify-content:center !important;width:100%;white-space:normal !important}
+  .footer > .footer-legal{overflow:visible;flex-wrap:wrap}
+  .footer > .footer-meta{align-items:center !important;text-align:center}
 }
 @media(max-width:860px){
   .logo-wrapper{width:40px!important;height:40px!important;margin-left:30px!important;position:relative!important;flex:0 0 40px!important}

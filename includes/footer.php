@@ -1,10 +1,9 @@
 <footer class="footer">
   <ul class="social-nav model-2" aria-label="Sosyal medya">
     <?php
-    // Tüm 4 ikon her zaman görünür. Link yoksa # render edilir (görsel kayıp olmasın).
     $socials = [
       ['facebook',  setting('social_facebook'),  'fa-facebook-f', 'Facebook'],
-      ['instagram', setting('social_instagram'), 'fa-instagram',  'Instagram'],
+      ['instagram', setting('social_instagram', 'https://www.instagram.com/lemondedutacos__'), 'fa-instagram', 'Instagram'],
       ['twitter',   setting('social_twitter'),   'fa-x-twitter',  'Twitter/X'],
       ['youtube',   setting('social_youtube'),   'fa-youtube',    'YouTube'],
     ];
@@ -25,22 +24,40 @@
   </nav>
 
   <div class="footer-meta">
-    <div style="font-weight:bold;font-family:'Georgia',serif">
-      <?= e(setting('footer_copyright', 'Copyright © ' . date('Y') . ' Tüm Hakları Saklıdır')) ?>
+    <div style="font-weight:bold;font-family:'Georgia',serif;">
+      Copyright © <?= date('Y') ?> <span style="font-style:italic;text-decoration:underline;">Tüm Hakları Saklıdır</span>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px">
-      Tasarım &amp; Geliştirme:
-      <a href="https://www.codega.com.tr" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700;text-decoration:none">CODEGA</a>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+      Tasarım &amp; Geliştirme: <a href="https://www.codega.com.tr" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700;text-decoration:none;">CODEGA</a>
     </div>
   </div>
 </footer>
 
 <style>
-.footer-legal{display:flex;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+/* Kurumsal.php'deki footer ile birebir aynı stil */
+.social-nav{padding:0;margin:0;list-style:none;display:flex;align-items:center;gap:10px;}
+.social-nav li{display:inline-block;}
+.social-nav a{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;text-decoration:none;background:#000;border-radius:8px;transition:.35s ease;overflow:hidden;font-size:18px;}
+.model-2 a{font-size:20px;border-radius:10px;}
+.model-2 a:hover{background:#fff;text-shadow:0px 0px #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5;}
+.model-2 .facebook{background:#3B579D;}.model-2 .facebook:hover{color:#3B579D;}
+.model-2 .instagram{background:#E1306C;}.model-2 .instagram:hover{color:#E1306C;}
+.model-2 .twitter{background:#111827;}.model-2 .twitter:hover{color:#111827;}
+.model-2 .youtube{background:#FF0000;}.model-2 .youtube:hover{color:#FF0000;}
+
+.footer{max-width:1280px !important;margin:0 auto !important;padding:22px 36px 26px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:48px !important;flex-wrap:wrap}
+.footer > *{flex:1 1 0;display:flex;align-items:center}
+.footer > .social-nav{justify-content:flex-start}
+.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap}
+.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
 .footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
 .footer-legal a:hover{color:var(--brand);text-decoration:underline}
 .footer-legal span{color:var(--muted);opacity:.5}
-.footer-meta{display:flex !important;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+@media(max-width:940px){
+  .footer{flex-direction:column !important;gap:14px !important;padding:18px 16px !important;text-align:center}
+  .footer > *{flex:none !important;justify-content:center !important;width:100%}
+  .footer > .footer-meta{align-items:center !important;text-align:center}
+}
 </style>
 
 <script>
@@ -62,7 +79,6 @@ document.addEventListener("click",e=>{if(!nv.classList.contains("open"))return;i
 (function(){
   const btn=document.getElementById('scrollTop');
   if(!btn)return;
-  // Anasayfada body overflow:hidden, scroll yok, butonu gösterme
   if(getComputedStyle(document.body).overflow==='hidden'){btn.style.display='none';return;}
   const onScroll=()=>{(window.scrollY||document.documentElement.scrollTop)>320?btn.classList.add('visible'):btn.classList.remove('visible');};
   window.addEventListener('scroll',onScroll,{passive:true});

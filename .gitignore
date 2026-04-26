@@ -16,3 +16,8 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+fix-it.php
+fix-it2.php
+rename-files.php
+diagnostic.php
+updater.php
