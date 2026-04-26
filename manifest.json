@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -9,7 +9,7 @@
     },
     "changelog": [
         {
-            "version": "1.0.5",
+            "version": "1.0.6",
             "date": "2026-04-26",
             "notes": [
                 "KRİTİK: asset() fonksiyonu domain-bağımsız relative path döner",
