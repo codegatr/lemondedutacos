@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+// Output buffering — admin sayfalarında POST sonrası header('Location:')
+// redirect'i çalışsın (HTML output'u zaten verilmişse de)
+if (!ob_get_level()) ob_start();
+
 require_once __DIR__ . '/../includes/functions.php';
 admin_require();
 

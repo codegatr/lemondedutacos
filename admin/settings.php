@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
-$page_h = 'Site Ayarları';
-require __DIR__ . '/_header.php';
+require_once __DIR__ . '/../includes/functions.php';
+admin_require();
 
+// POST handler header.php'den ÖNCE — header HTML render etmeden redirect çalışsın
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_required();
     $fields = [
@@ -28,6 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash_set('success', 'Ayarlar kaydedildi.');
     header('Location: settings.php'); exit;
 }
+
+$page_h = 'Site Ayarları';
+require __DIR__ . '/_header.php';
 ?>
 
 <form method="post" enctype="multipart/form-data">

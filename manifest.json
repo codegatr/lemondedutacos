@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,17 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.3.2",
+            "date": "2026-04-26",
+            "notes": [
+                "Site Ayarları kaydet boş ekran sorunu düzeltildi",
+                "  Sebep: _header.php önce HTML render ediyordu, sonra POST handler header() Location redirect çağırıyordu — output zaten gönderilmiş, redirect sessiz fail",
+                "  Çözüm 1: admin/_header.php başına ob_start() eklendi (output buffering)",
+                "  Çözüm 2: admin/settings.php'de POST handler _header.php'den ÖNCE'ye taşındı",
+                "  Bu fix tüm admin POST→redirect akışını düzeltir (menu, users, promo-cards, applications, normalize-images)"
+            ]
+        },
         {
             "version": "1.3.1",
             "date": "2026-04-26",
