@@ -56,6 +56,9 @@ body{overflow:hidden;display:flex;flex-direction:column;height:100vh;height:100d
 .fix-item{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#f6f6f6;transition:transform .2s}
 .fix-item:hover{transform:translateY(-3px)}
 .fix-item img{width:100%;height:320px;object-fit:cover;display:block}
+.fix-placeholder{width:100%;height:320px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a3d0a 0%,#2d4f11 100%);color:rgba(255,255,255,.55);font-size:64px}
+.fix-item-noimg{background:#fff;border:1px solid #e5e7eb}
+.fix-item-noimg .fix-caption{padding:24px 14px;font-size:15px}
 .fix-caption{padding:14px;font-weight:700;text-align:center;font-size:14px;color:var(--ink)}
 @media(max-width:860px){
   /* Mobile: doğal akış (header → hero → footer) */
@@ -100,7 +103,7 @@ require __DIR__ . '/includes/header.php';
           <?php if ($s['image_mobile']): ?>
             <source media="(max-width: 860px)" srcset="<?= e(asset($s['image_mobile'])) ?>">
           <?php endif; ?>
-          <img src="<?= e(asset($s['image'])) ?>" alt="<?= e($s['title'] ?? '') ?>">
+          <img src="<?= e(asset($s['image'])) ?>" alt="<?= e($s['title'] ?? '') ?>" onerror="this.style.display='none'">
         </picture>
       </div>
     <?php endforeach; ?>
@@ -118,7 +121,7 @@ require __DIR__ . '/includes/header.php';
       <?php foreach ($groups as $g): ?>
         <div class="icon-card">
           <button class="icon-btn" data-group="<?= e($g['code']) ?>" type="button">
-            <img src="<?= e(asset($g['icon'])) ?>" alt="<?= e($g['label']) ?>">
+            <img src="<?= e(asset($g['icon'])) ?>" alt="<?= e($g['label']) ?>" onerror="this.style.display='none'">
           </button>
           <div class="icon-label"><?= e($g['label']) ?></div>
         </div>
@@ -130,14 +133,20 @@ require __DIR__ . '/includes/header.php';
     <div class="fixmenu-overlay" id="overlay-<?= e($g['code']) ?>">
       <div class="fixmenu-panel">
         <div class="fixmenu-grid" style="<?= count($promos) <= 2 ? 'grid-template-columns:repeat(2,minmax(220px,320px))' : '' ?>">
-          <?php foreach ($promos as $p): ?>
-            <a href="<?= e($g['page_slug']) ?>.php?tab=<?= e($p['tab_code']) ?>" class="fix-item">
-              <picture>
-                <?php if ($p['image_mobile']): ?>
-                  <source media="(max-width: 860px)" srcset="<?= e(asset($p['image_mobile'])) ?>">
-                <?php endif; ?>
-                <img src="<?= e(asset($p['image'])) ?>" alt="<?= e($p['title']) ?>">
-              </picture>
+          <?php foreach ($promos as $p): $hasImg = asset_exists($p['image']) || asset_exists($p['image_mobile']); ?>
+            <a href="<?= e($g['page_slug']) ?>.php?tab=<?= e($p['tab_code']) ?>" class="fix-item<?= $hasImg ? '' : ' fix-item-noimg' ?>">
+              <?php if ($hasImg): ?>
+                <picture>
+                  <?php if ($p['image_mobile'] && asset_exists($p['image_mobile'])): ?>
+                    <source media="(max-width: 860px)" srcset="<?= e(asset($p['image_mobile'])) ?>">
+                  <?php endif; ?>
+                  <img src="<?= e(asset($p['image'])) ?>" alt="<?= e($p['title']) ?>" onerror="this.parentElement.parentElement.classList.add('fix-item-noimg');this.parentElement.style.display='none'">
+                </picture>
+              <?php else: ?>
+                <div class="fix-placeholder" aria-hidden="true">
+                  <i class="fa-solid fa-utensils"></i>
+                </div>
+              <?php endif; ?>
               <span class="fix-caption"><?= e($p['title']) ?></span>
             </a>
           <?php endforeach; ?>

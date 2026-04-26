@@ -320,6 +320,34 @@ function asset(?string $path): string {
     return implode('/', $encoded) . $qs;
 }
 
+/**
+ * Görsel disk üzerinde var mı kontrol eder.
+ * URL kontrolü yapar (http/https), gerçek dosya kontrolü değil.
+ * Local path için disk kontrolü yapar.
+ *
+ * Türkçe karakterler ve Unicode escape sequence (FileZilla #U... formatı)
+ * varyantlarını kontrol eder.
+ */
+function asset_exists(?string $path): bool {
+    if (!$path) return false;
+    // Remote URL — varsayılan olarak true (HEAD request maliyetli)
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
+        return true;
+    }
+    $root = realpath(__DIR__ . '/..');
+    if (!$root) return false;
+    $path = '/' . ltrim($path, '/');
+    // 1. UTF-8 olduğu gibi
+    if (@file_exists($root . $path)) return true;
+    // 2. Unicode escape (FileZilla #U00e7 formatı)
+    $escaped = preg_replace_callback('/[çÇğĞıİöÖşŞüÜ]/u', function ($m) {
+        $hex = str_pad(strtoupper(dechex(mb_ord($m[0], 'UTF-8'))), 4, '0', STR_PAD_LEFT);
+        return '#U' . $hex;
+    }, $path);
+    if ($escaped !== $path && @file_exists($root . $escaped)) return true;
+    return false;
+}
+
 /* ================== SAYFALAMA ================== */
 
 function paginate(int $total, int $per_page, int $current): array {

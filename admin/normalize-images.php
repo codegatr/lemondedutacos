@@ -40,6 +40,31 @@ function col_exists(PDO $pdo, string $table, string $col): bool {
 // Türkçe karakter içeren regex (PHP-side)
 $tr_chars = '/[çÇğĞıİöÖşŞüÜ]/u';
 
+// === POST: KAYIP REFERANSLAR TEMİZLE ===
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cleanup_orphans') {
+    csrf_required();
+
+    $cleaned = 0;
+    foreach ($image_tables as $table => $cols) {
+        foreach ($cols as $col) {
+            if (!col_exists($pdo, $table, $col)) continue;
+            $rows = $pdo->query("SELECT id, $col AS path FROM $table WHERE $col IS NOT NULL AND $col != ''")->fetchAll();
+            foreach ($rows as $r) {
+                $path = (string)$r['path'];
+                // Remote URL'lere dokunma
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) continue;
+                if (!asset_exists($path)) {
+                    $pdo->prepare("UPDATE $table SET $col = NULL WHERE id = ?")->execute([(int)$r['id']]);
+                    $cleaned++;
+                }
+            }
+        }
+    }
+    log_activity('orphan_images_cleaned', null, "Cleaned: $cleaned");
+    flash_set('success', "$cleaned kayıp görsel referansı DB'den temizlendi. Bu kayıtları admin panelinden düzenleyip görsellerini yeniden yükleyebilirsiniz.");
+    header('Location: normalize-images.php'); exit;
+}
+
 // === POST: NORMALIZE UYGULA ===
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'apply') {
     csrf_required();
@@ -142,6 +167,24 @@ foreach ($image_tables as $table => $cols) {
 
 $failed = $_SESSION['_normalize_failed'] ?? [];
 unset($_SESSION['_normalize_failed']);
+
+// Kayıp görsel referansı tara (Türkçe karakter olmasa bile)
+$orphans = [];
+foreach ($image_tables as $table => $cols) {
+    foreach ($cols as $col) {
+        if (!col_exists($pdo, $table, $col)) continue;
+        try {
+            $rows = $pdo->query("SELECT id, $col AS path FROM $table WHERE $col IS NOT NULL AND $col != ''")->fetchAll();
+        } catch (Throwable $e) { continue; }
+        foreach ($rows as $r) {
+            $p = (string)$r['path'];
+            if (str_starts_with($p, 'http')) continue;
+            if (!asset_exists($p)) {
+                $orphans[] = ['table' => $table, 'col' => $col, 'id' => (int)$r['id'], 'path' => $p];
+            }
+        }
+    }
+}
 ?>
 
 <div class="card">
@@ -164,6 +207,41 @@ unset($_SESSION['_normalize_failed']);
     <?php endforeach; ?>
   </ul>
   <p style="margin-top:12px;font-size:12.5px">Çözüm: İlgili görseli yeniden Admin panelinden yükleyin (admin upload otomatik ASCII filename üretir).</p>
+</div>
+<?php endif; ?>
+
+<?php if ($orphans): ?>
+<div class="card" style="border-left:4px solid #dc2626;background:#fee2e2">
+  <h2 style="color:#991b1b"><i class="fa-solid fa-image-slash"></i> Kayıp Görsel Referansları (<?= count($orphans) ?>)</h2>
+  <p style="margin-bottom:10px;font-size:13.5px;line-height:1.7">
+    Aşağıdaki kayıtlarda DB'de görsel yolu var ama disk üzerinde dosya bulunamıyor.
+    Bu durum sitede "broken image" ikonu olarak görünür. Tek tıkla referansları DB'den temizleyebilirsiniz —
+    ardından ilgili admin sayfasından görsel yeniden yüklenebilir.
+  </p>
+  <div style="max-height:240px;overflow-y:auto;background:#fff;padding:10px;border-radius:6px;border:1px solid #fecaca">
+    <table style="font-size:12.5px;width:100%">
+      <thead>
+        <tr><th>Tablo</th><th>Kolon</th><th>ID</th><th>Yol</th></tr>
+      </thead>
+      <tbody>
+        <?php foreach ($orphans as $o): ?>
+          <tr>
+            <td><code><?= e($o['table']) ?></code></td>
+            <td><code><?= e($o['col']) ?></code></td>
+            <td><?= $o['id'] ?></td>
+            <td style="font-family:monospace;font-size:11.5px;color:#dc2626"><?= e($o['path']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <form method="post" style="margin-top:14px" onsubmit="return confirm('<?= count($orphans) ?> kayıp görsel referansını DB\'den temizlemek üzeresiniz.\n\nBu kayıtların görselleri NULL olacak (kayıt silinmez). Devam edilsin mi?')">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="cleanup_orphans">
+    <button type="submit" class="btn btn-danger">
+      <i class="fa-solid fa-broom"></i> Kayıp Referansları Temizle
+    </button>
+  </form>
 </div>
 <?php endif; ?>
 

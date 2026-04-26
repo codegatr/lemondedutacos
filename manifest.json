@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.2",
+    "version": "1.1.3",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,24 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.3",
+            "date": "2026-04-26",
+            "notes": [
+                "YENİ: asset_exists() — görsel disk üzerinde var mı kontrol eder",
+                "  UTF-8 + Unicode escape (FileZilla #U... formatı) varyantlarını dener",
+                "Anasayfa promo kartları: görsel diskte yoksa placeholder gösterir",
+                "  - 320px yeşil gradient + utensils ikonu",
+                "  - Title olduğu gibi büyütülmüş şekilde altta",
+                "  - Tıklanabilir, menü sayfasına yönlendirir",
+                "  - <img onerror> ile runtime fallback",
+                "Slider ve grup ikonu için onerror ile broken icon gizlenir",
+                "YENİ: Admin → Görsel Normalize'da 'Kayıp Görsel Referansları' bölümü",
+                "  - DB'de path var ama disk üzerinde dosya yoksa listeler",
+                "  - Tek tıkla 'Kayıp Referansları Temizle' (image alanını NULL yapar)",
+                "  - 9 tablodaki tüm image* kolonlarını tarar"
+            ]
+        },
         {
             "version": "1.1.2",
             "date": "2026-04-26",
