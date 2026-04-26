@@ -32,53 +32,66 @@ $nav = [
 <link rel="stylesheet" href="/static/fonts/retrim/stylesheet.css">
 <style>
 :root{--brand:#3A5F0B;--brand2:#b24545;--ink:#1f2937;--muted:#6b7280;--bg:#ffffff;--shadow:0 10px 30px rgba(0,0,0,.18);--max:1180px}
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%;overflow-x:hidden}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg)}
 a{color:inherit;text-decoration:none}
 button{font:inherit}
-.topbar{position:sticky;top:0;z-index:999;background:#fff}
+
+/* ===== TOPBAR ===== */
+.topbar{position:sticky;top:0;z-index:999;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .topbar-inner{max-width:var(--max);margin:0 auto;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.brand{display:flex;align-items:center;gap:14px;min-width:240px}
-.logo-wrapper{position:relative;width:60px;height:60px;flex:0 0 60px}
-.brand-logo{position:absolute;top:-30px;left:50%;transform:translateX(-50%);height:130px;width:auto;pointer-events:none}
+.brand{position:relative;display:flex;align-items:center;gap:2px;min-width:220px}
+.logo-wrapper{width:50px;height:50px;margin-left:80px;position:relative}
+.brand-logo{position:absolute;height:170px;width:auto;left:50%;transform:translateX(-70%);top:-40px;pointer-events:none}
 .brand-text{margin-top:20px;display:flex;flex-direction:column;justify-content:center}
-.brand .logo{font-size:24px;font-weight:700;color:var(--brand);letter-spacing:.5px}
-.nav{display:flex;gap:6px;flex-wrap:wrap}
-.nav a{padding:10px 14px;border-radius:8px;font-weight:600;font-size:13px;letter-spacing:.5px;color:var(--ink);transition:.2s}
-.nav a:hover,.nav a.active{background:var(--brand);color:#fff}
-.hamburger{display:none;width:42px;height:42px;border:0;background:transparent;cursor:pointer;align-items:center;justify-content:center;border-radius:8px}
-.hamburger span,.hamburger span:before,.hamburger span:after{content:'';display:block;width:22px;height:2px;background:var(--ink);position:relative}
-.hamburger span:before{position:absolute;top:-7px}
-.hamburger span:after{position:absolute;top:7px}
-.footer{padding:18px 24px;background:#fff;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;font-size:12px;gap:12px;flex-wrap:wrap}
-.social-nav{list-style:none;margin:0;padding:0;display:flex;gap:8px}
+.brand .logo{font-family:Georgia,serif;font-size:28px;line-height:1;color:#3A5F0B;font-weight:700;font-style:italic}
+.nav{display:flex;align-items:center;gap:12px}
+.nav a{padding:9px 12px;border-radius:6px;font-family:'Retrim',sans-serif;font-weight:400;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:#1f2937;white-space:nowrap;transition:all .25s ease}
+.nav a.active{background:var(--brand);color:#fff}
+.nav a:not(.active):hover{background:var(--brand);color:#fff}
+.hamburger{display:none;width:44px;height:40px;border:1px solid rgba(0,0,0,.12);border-radius:10px;background:#fff;align-items:center;justify-content:center;cursor:pointer;z-index:9999}
+.hamburger span{display:block;width:18px;height:2px;background:#111827;position:relative}
+.hamburger span::before,.hamburger span::after{content:"";position:absolute;left:0;width:18px;height:2px;background:#111827}
+.hamburger span::before{top:-6px}
+.hamburger span::after{top:6px}
+
+/* ===== FOOTER ===== */
+.footer{max-width:var(--max);margin:0 auto;padding:18px 18px 26px;display:flex;align-items:center;justify-content:space-between;gap:14px;color:var(--muted);font-size:12px}
+.social-nav{padding:0;margin:0;list-style:none;display:flex;align-items:center;gap:10px}
 .social-nav li{display:inline-block}
-.model-2 a{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;border-radius:10px;color:#fff;font-size:18px;overflow:hidden;text-decoration:none;transition:.2s}
-.model-2 a:hover{background:#fff !important;text-shadow:0 0 #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5,5px 5px #d5d5d5,6px 6px #d5d5d5,7px 7px #d5d5d5}
-.model-2 .facebook{background:#3B579D}
-.model-2 .facebook:hover{color:#3B579D}
-.model-2 .instagram{background:#E1306C}
-.model-2 .instagram:hover{color:#E1306C}
-.model-2 .twitter{background:#111827}
-.model-2 .twitter:hover{color:#111827}
-.model-2 .youtube{background:#FF0000}
-.model-2 .youtube:hover{color:#FF0000}
-.flash{padding:12px 16px;border-radius:8px;margin:14px auto;max-width:900px;font-size:14px;font-weight:500}
+.social-nav a{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;text-decoration:none;background:#000;border-radius:8px;transition:.35s ease;overflow:hidden;font-size:18px}
+.model-2 a{font-size:20px;border-radius:10px}
+.model-2 a:hover{background:#fff;text-shadow:0px 0px #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5}
+.model-2 .facebook{background:#3B579D}.model-2 .facebook:hover{color:#3B579D}
+.model-2 .instagram{background:#E1306C}.model-2 .instagram:hover{color:#E1306C}
+.model-2 .twitter{background:#111827}.model-2 .twitter:hover{color:#111827}
+.model-2 .youtube{background:#FF0000}.model-2 .youtube:hover{color:#FF0000}
+
+/* ===== FLASH ===== */
+.flash{padding:12px 16px;border-radius:8px;margin:14px auto;max-width:1180px;font-size:14px;font-weight:500}
 .flash-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
 .flash-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
 .flash-info{background:#dbeafe;border:1px solid #93c5fd;color:#1e3a8a}
 .flash-warning{background:#fef3c7;border:1px solid #fcd34d;color:#92400e}
-@media(max-width:860px){
-  .logo-wrapper{width:40px;height:40px;margin-left:30px;flex:0 0 40px}
-  .brand-logo{height:90px;top:-16px;transform:translateX(-70%)}
+
+@media(max-width:940px){
+  .logo-wrapper{margin-left:20px}
+  .brand-logo{height:90px;top:-16px}
   .brand .logo{font-size:20px}
   .brand-text{margin-top:12px}
   .brand{min-width:auto}
   .hamburger{display:flex}
-  .nav{position:absolute;top:64px;right:12px;left:12px;background:#fff;border:1px solid rgba(0,0,0,.10);border-radius:14px;box-shadow:var(--shadow);padding:10px;display:none;flex-direction:column;align-items:stretch;gap:6px;z-index:9998}
+  .nav{position:absolute;top:58px;right:12px;left:12px;background:#fff;border:1px solid rgba(0,0,0,.10);border-radius:14px;box-shadow:var(--shadow);padding:10px;display:none;flex-direction:column;align-items:stretch;gap:6px;z-index:9998}
   .nav.open{display:flex}
   .nav a{padding:12px}
+  .footer{flex-direction:column;text-align:center;gap:8px;padding:14px 10px}
 }
+@media(max-width:860px){
+  .logo-wrapper{width:40px!important;height:40px!important;margin-left:30px!important;position:relative!important;flex:0 0 40px!important}
+  .brand-logo{position:absolute!important;height:90px!important;width:auto!important;left:50%!important;top:-16px!important;transform:translateX(-70%)!important;pointer-events:none!important}
+}
+
 <?= $extra_css ?>
 </style>
 </head>
@@ -90,13 +103,13 @@ button{font:inherit}
         <img class="brand-logo" src="<?= e(asset($site_logo)) ?>" alt="<?= e(setting('site_name', SITE_NAME)) ?>">
       </div>
       <div class="brand-text">
-        <div class="logo" style="font-style:italic"><?= e(setting('site_name', SITE_NAME)) ?></div>
+        <div class="logo"><?= e(setting('site_name', SITE_NAME)) ?></div>
       </div>
     </a>
-    <button class="hamburger" id="hamburger" aria-label="Menü"><span></span></button>
+    <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat"><span></span></button>
     <nav class="nav" id="nav">
       <?php foreach ($nav as [$slug, $href, $label]): ?>
-        <a class="<?= $page_slug === $slug ? 'active' : '' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
+        <a<?= $page_slug === $slug ? ' class="active"' : '' ?> href="<?= e($href) ?>"><?= e($label) ?></a>
       <?php endforeach; ?>
     </nav>
   </div>

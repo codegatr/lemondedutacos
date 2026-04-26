@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,26 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.4",
+            "date": "2026-04-26",
+            "notes": [
+                "TÜM SAYFALAR orijinal HTML site ile birebir görsel uyum sağlandı",
+                "kurumsal.php: subnav + page-hero + slogan-strip + cards + MVH + 4D+1 formul",
+                "tarihce.php: timeline + intro + stats sections (orijinal animasyonlu)",
+                "hakkimizda.php: video hero + about-card pattern (orijinal yapı)",
+                "uretim.php: process-flow + cert-grid + quality-section",
+                "medya.php: orijinal medya galerisi yapısı",
+                "subeler.php: orijinal hero-grid + DB'den dinamik şube listesi",
+                "kampanyalar.php: orijinal slider + DB'den kampanyalar",
+                "iletisim.php: orijinal form + CSRF + DB save + e-posta + flash mesaj",
+                "franchise.php: orijinal form + CSRF + DB save + e-posta",
+                "insan-kaynaklari.php: orijinal layout + form + CSRF + CV upload + DB save",
+                "Menu sayfaları (tacos/bun/burger/tatli): orijinal tab paneli + DB'den ürünler",
+                "header.php: orijinal CSS değerleriyle topbar (logo wrapper margin-left:80px, brand-logo height:170px, .nav font-size:12px Retrim)",
+                "footer.php: model-2 sosyal medya pattern (Facebook/Instagram/Twitter/YouTube her zaman görünür)"
+            ]
+        },
         {
             "version": "1.0.3",
             "date": "2026-04-26",
