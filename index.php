@@ -58,18 +58,29 @@ body{overflow:hidden;display:flex;flex-direction:column;height:100vh;height:100d
 .fix-item img{width:100%;height:320px;object-fit:cover;display:block}
 .fix-caption{padding:14px;font-weight:700;text-align:center;font-size:14px;color:var(--ink)}
 @media(max-width:860px){
-  body{overflow:auto}
-  .hero{height:auto}
+  /* Mobile: tek-sayfa kilitlenmesini iptal et, doğal akış kullan */
+  body{overflow:auto !important;display:block !important;height:auto !important}
+  .hero{flex:none !important;height:auto !important;min-height:auto !important;overflow:visible !important}
   .hero-slider{height:60vh;min-height:380px}
   .hero-arrow{width:42px;height:42px;font-size:14px}
-  .strip{position:static;padding:20px 8px 16px}
-  .strip-inner{gap:18px}
+  /* Strip artık hero'nun altında normal akışta - butonlar kesilmez */
+  .strip{position:static !important;padding:24px 12px 20px;background:linear-gradient(180deg,#8b2d2d,#6b1f1f)}
+  .strip-inner{gap:18px;flex-wrap:wrap}
   .icon-card{width:auto}
   .icon-btn{width:clamp(72px,20vw,108px);height:clamp(72px,20vw,108px)}
-  .icon-label{font-size:11px}
-  .fixmenu-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-  .fix-item img{height:180px}
-  .fix-caption{padding:10px;font-size:11px}
+  .icon-label{font-size:11px;color:#fff}
+  .fixmenu-panel{max-height:90vh;overflow-y:auto}
+  .fixmenu-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:12px}
+  #croustyOverlay .fixmenu-grid,#tatliOverlay .fixmenu-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  .fix-item img{height:160px}
+  .fix-caption{padding:10px;font-size:12px}
+}
+@media(max-width:480px){
+  .strip-inner{gap:10px;justify-content:space-around}
+  .icon-card{flex:1 1 calc(50% - 10px);max-width:140px}
+  .fixmenu-grid{grid-template-columns:1fr !important}
+  #croustyOverlay .fixmenu-grid,#tatliOverlay .fixmenu-grid{grid-template-columns:1fr !important}
+  .fix-item img{height:200px}
 }
 ";
 require __DIR__ . '/includes/header.php';

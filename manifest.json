@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,22 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.1",
+            "date": "2026-04-26",
+            "notes": [
+                "DÜZELTME: Anasayfada mobilde 4 yuvarlak buton görünmüyor sorunu",
+                "  Sebep: Desktop'tan miras kalan body{display:flex;height:100vh} ve",
+                "         .hero{flex:1;overflow:hidden} kuralları mobile'da hala aktifti.",
+                "         Hero 100vh içinde flex:1 alıyor, slider 380px alıyor,",
+                "         strip butonları kalan alana sığmayıp overflow:hidden ile kesiliyordu.",
+                "  Çözüm: Mobile'da body display:block + height:auto, hero overflow:visible,",
+                "         strip kendi background'u ile hero altında normal akışta",
+                "Mobile popup grid: 3 kolon → 2 kolon (480px altında 1 kolon)",
+                "480px altında stripe butonları 2x2 grid (sığmama önleme)",
+                "Popup panel scroll edebilir (uzun içerikte mobile için)"
+            ]
+        },
         {
             "version": "1.1.0",
             "date": "2026-04-26",
