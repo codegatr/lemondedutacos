@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,17 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.8",
+            "date": "2026-04-26",
+            "notes": [
+                "migrations/003_relink_secilmis_lezzetler.sql eklendi",
+                "  Diagnostic raporu: dosyalar diskte mevcut (Türkçe karakterli),",
+                "  ama DB'de path boş string. Bu migration tab_code='secilmis' kaydını",
+                "  diskte var olan dosya ile onarır. (asset() Türkçe karakterleri",
+                "  zaten URL-encode eder, frontend sorunsuz çalışır)"
+            ]
+        },
         {
             "version": "1.1.7",
             "date": "2026-04-26",
