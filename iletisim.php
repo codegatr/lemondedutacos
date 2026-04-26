@@ -227,7 +227,9 @@ $branches = db()->query("SELECT id, title FROM branches WHERE is_active = 1 ORDE
       background:url("static/img/yeni/o.png") center center / cover no-repeat;
       overflow:hidden;
       rotate:-2deg;
-      scale:0.95;
+      scale:1.02;
+      width:104vw;
+      margin-left:calc(50% - 52vw);
       z-index:999;
     }
     .hero::after{

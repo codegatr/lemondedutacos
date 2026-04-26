@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,20 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.1.5",
+            "date": "2026-04-26",
+            "notes": [
+                "Hero rotate efektli sayfalarda kenar boşluğu/kesilme sorunu düzeltildi",
+                "  Etkilenen sayfalar: iletisim.php, franchise.php, hakkimizda.php, subeler.php",
+                "  Sebep: .hero{rotate:-2deg;scale:0.95} ile -2deg dönüş + scale:0.95 küçültme,",
+                "         viewport %100'de kenarlarda yeşil/koyu boş alan bırakıyordu.",
+                "         Zoom %80'de viewport küçük olduğu için fark edilmiyordu.",
+                "  Çözüm: scale 0.95 → 1.02 (büyüt), width:104vw + negatif margin ile",
+                "         viewport'u tam doldur, body'ye overflow-x:hidden ekle",
+                "         Rotate yansımasını absorb eder, her ekran boyutunda doğru görünür"
+            ]
+        },
         {
             "version": "1.1.4",
             "date": "2026-04-26",

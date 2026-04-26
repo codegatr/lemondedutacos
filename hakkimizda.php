@@ -156,7 +156,9 @@
       background: #000;
       overflow:hidden;
       rotate: -2deg;
-      scale: 0.95;
+      scale: 1.02;
+      width: 104vw;
+      margin-left: calc(50% - 52vw);
       z-index: 999;
       transform-origin:center;
     }

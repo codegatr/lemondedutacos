@@ -82,6 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     *{ box-sizing:border-box; }
+    html,body{ max-width:100%; overflow-x:hidden; }
     body{
       margin:0;
       overflow:hidden; /* desktop: görsel sabit */
@@ -202,7 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       transform-origin:center;
       overflow:hidden;
       rotate:-2deg;
-      scale:.95;
+      scale:1.02;
+      width:104vw;
+      margin-left:calc(50% - 52vw);
       z-index:999;
     }
     .hero::after{
