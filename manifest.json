@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.3.2",
+    "version": "1.4.0",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,25 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.0",
+            "date": "2026-04-26",
+            "notes": [
+                "Şubeler sayfası SIFIRDAN yazıldı — modern brand renkleri ile",
+                "  Eski: 1087 satır, hero rotation + typewriter grid kutucukları",
+                "  Yeni: 739 satır, normal sayfa flow, kart tabanlı modern grid",
+                "Yeşil banner + dalgalı geçiş, kırmızı tag, beyaz içerik alanı",
+                "İstatistik şeridi: Aktif Şube / Şehir / 7-24 Online Sipariş",
+                "Şube kartları: city badge, address+phone+hours, Yol Tarifi + Ara butonları",
+                "Hover: kırmızı kenarlık + üst gradient çizgi animasyonu",
+                "Canlı arama (input) + şehir filtreleri (chip'ler)",
+                "Tüm branches tablosu alanları kullanılıyor (city, district, work_hours, phone)",
+                "Bize Katılın CTA: kırmızı gradient kart, franchise.php'a yönlendirme",
+                "  4 özellik bullet: Lokasyon Analizi / Operasyon Desteği / Pazarlama / Eğitim",
+                "  'Hemen Başvuru Yap' (franchise) + 'Bilgi Al' (iletisim) butonları",
+                "Tam responsive: 320px+ kart grid, mobilde tek sütun"
+            ]
+        },
         {
             "version": "1.3.2",
             "date": "2026-04-26",

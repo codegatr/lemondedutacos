@@ -1,1088 +1,739 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/functions.php';
+
 $branches = db()->query(
-    "SELECT title, address, map_url FROM branches WHERE is_active = 1 ORDER BY sort_order, id"
+    "SELECT id, title, city, district, address, phone, map_url, map_embed, work_hours, sort_order
+     FROM branches WHERE is_active = 1 ORDER BY sort_order, id"
 )->fetchAll();
+
+// Şehirlere göre gruplama (filtre için)
+$cities = [];
+foreach ($branches as $b) {
+    $c = trim($b['city'] ?? '');
+    if ($c !== '' && !in_array($c, $cities, true)) $cities[] = $c;
+}
+sort($cities);
+
+$page_title = 'Şubeler';
+$page_desc  = 'Le Monde Du Tacos şubelerimiz — size en yakın şubeyi bulun, adres ve iletişim bilgilerine göz atın.';
+$page_slug  = 'subeler';
+$extra_css  = "
+.page-banner{
+  position:relative;
+  background:linear-gradient(135deg,#3a5f0b 0%,#2a4508 60%,#1a2f06 100%);
+  min-height:260px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#fff;
+  padding:56px 20px;
+  overflow:hidden;
+}
+.page-banner::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(circle at 20% 50%,rgba(178,69,69,.18),transparent 50%),radial-gradient(circle at 80% 30%,rgba(255,255,255,.06),transparent 60%);
+}
+.page-banner::after{
+  content:'';
+  position:absolute;
+  bottom:-40px;
+  left:50%;
+  transform:translateX(-50%);
+  width:120%;
+  height:80px;
+  background:#fff;
+  clip-path:polygon(0 60%,100% 0,100% 100%,0 100%);
+}
+.page-banner > .pb-inner{ position:relative; z-index:2; max-width:820px; }
+.page-banner h1{
+  font-family:Georgia,serif;
+  font-size:clamp(30px,4.4vw,52px);
+  font-weight:700;
+  margin-bottom:12px;
+  letter-spacing:.5px;
+  text-shadow:0 2px 18px rgba(0,0,0,.3);
+}
+.page-banner p{
+  font-size:clamp(14px,1.6vw,17px);
+  opacity:.95;
+  line-height:1.6;
+  max-width:640px;
+  margin:0 auto;
+}
+.page-banner .tag{
+  display:inline-block;
+  background:#b24545;
+  color:#fff;
+  padding:7px 16px;
+  border-radius:100px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.6px;
+  margin-bottom:18px;
+  box-shadow:0 4px 14px rgba(178,69,69,.45);
+}
+
+/* İstatistik şeridi */
+.stats-bar{
+  max-width:1180px;
+  margin:-44px auto 40px;
+  position:relative;
+  z-index:5;
+  padding:0 20px;
+}
+.stats-bar-inner{
+  background:#fff;
+  border-radius:20px;
+  padding:28px 24px;
+  box-shadow:0 12px 40px rgba(0,0,0,.08);
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+@media(max-width:560px){
+  .stats-bar-inner{ grid-template-columns:1fr; gap:18px; padding:20px; }
+}
+.stat-cell{
+  text-align:center;
+  padding:8px 12px;
+  border-right:1px solid #f1f5f9;
+}
+.stat-cell:last-child{ border-right:none; }
+@media(max-width:560px){ .stat-cell{ border-right:none; border-bottom:1px solid #f1f5f9; padding-bottom:18px; } .stat-cell:last-child{border-bottom:none;} }
+.stat-num{
+  font-family:Georgia,serif;
+  font-size:36px;
+  font-weight:700;
+  color:#3a5f0b;
+  line-height:1;
+}
+.stat-lbl{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.7px;
+  color:#9ca3af;
+  margin-top:6px;
+  font-weight:700;
+}
+
+/* Şube listesi */
+.br-section{
+  max-width:1180px;
+  margin:0 auto;
+  padding:8px 20px 56px;
+}
+.br-section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:14px;
+  margin-bottom:24px;
+}
+.br-section-head h2{
+  font-family:Georgia,serif;
+  font-size:clamp(22px,2.6vw,30px);
+  color:#1f2937;
+  font-weight:700;
+}
+.br-section-head h2 i{ color:#b24545; margin-right:8px; }
+.br-search{
+  position:relative;
+  min-width:260px;
+}
+.br-search input{
+  width:100%;
+  padding:10px 14px 10px 40px;
+  border:1px solid #d1d5db;
+  border-radius:100px;
+  font-size:14px;
+  font-family:inherit;
+  background:#fff;
+  transition:border-color .15s,box-shadow .15s;
+}
+.br-search input:focus{
+  outline:none;
+  border-color:#3a5f0b;
+  box-shadow:0 0 0 3px rgba(58,95,11,.12);
+}
+.br-search i{
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#9ca3af;
+  font-size:14px;
+}
+
+/* Şehir filtreleri */
+.city-filter{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:28px;
+  padding:4px 0;
+}
+.city-chip{
+  padding:7px 14px;
+  border-radius:100px;
+  background:#f9fafb;
+  border:1px solid #e5e7eb;
+  font-size:12.5px;
+  font-weight:600;
+  color:#6b7280;
+  cursor:pointer;
+  transition:all .15s;
+  font-family:inherit;
+}
+.city-chip:hover{
+  border-color:#3a5f0b;
+  color:#3a5f0b;
+  background:#fff;
+}
+.city-chip.active{
+  background:#3a5f0b;
+  border-color:#3a5f0b;
+  color:#fff;
+  box-shadow:0 4px 12px rgba(58,95,11,.25);
+}
+
+/* Şube kartları grid */
+.br-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:22px;
+}
+.br-card{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+  position:relative;
+}
+.br-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 18px 40px rgba(0,0,0,.10);
+  border-color:#b24545;
+}
+.br-card::before{
+  content:'';
+  position:absolute;
+  top:0; left:0;
+  height:4px;
+  width:0;
+  background:linear-gradient(90deg,#3a5f0b,#b24545);
+  transition:width .35s ease;
+}
+.br-card:hover::before{ width:100%; }
+
+.br-card-img{
+  height:140px;
+  background:linear-gradient(135deg,#3a5f0b 0%,#2a4508 100%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+.br-card-img::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(circle at 30% 70%,rgba(178,69,69,.25),transparent 60%);
+}
+.br-card-img i{
+  font-size:54px;
+  color:#fff;
+  opacity:.85;
+  position:relative;
+  z-index:2;
+  text-shadow:0 4px 18px rgba(0,0,0,.3);
+}
+.br-card-city{
+  position:absolute;
+  top:14px;
+  left:14px;
+  background:rgba(255,255,255,.95);
+  color:#3a5f0b;
+  padding:5px 12px;
+  border-radius:100px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  z-index:3;
+  backdrop-filter:blur(4px);
+}
+
+.br-card-body{
+  padding:22px 20px 18px;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+.br-card-title{
+  font-family:Georgia,serif;
+  font-size:18px;
+  color:#1f2937;
+  margin-bottom:6px;
+  font-weight:700;
+  line-height:1.3;
+}
+.br-card-district{
+  font-size:12px;
+  color:#9ca3af;
+  font-weight:600;
+  margin-bottom:14px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.br-detail{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  font-size:13px;
+  color:#4b5563;
+  line-height:1.55;
+  margin-bottom:10px;
+}
+.br-detail i{
+  width:14px;
+  color:#b24545;
+  margin-top:3px;
+  font-size:13px;
+  flex-shrink:0;
+}
+.br-detail a{ color:#3a5f0b; font-weight:600; }
+.br-detail a:hover{ text-decoration:underline; }
+.br-card-foot{
+  margin-top:auto;
+  padding-top:14px;
+  border-top:1px solid #f1f5f9;
+  display:flex;
+  gap:8px;
+}
+.br-btn{
+  flex:1;
+  padding:9px 12px;
+  border-radius:8px;
+  font-size:12.5px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.4px;
+  border:none;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-family:inherit;
+  transition:transform .12s,box-shadow .15s;
+  text-decoration:none;
+}
+.br-btn-map{
+  background:linear-gradient(90deg,#3a5f0b,#16a34a);
+  color:#fff;
+}
+.br-btn-map:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(58,95,11,.3); }
+.br-btn-call{
+  background:#fff;
+  color:#b24545;
+  border:1px solid #fecaca;
+}
+.br-btn-call:hover{ background:#fee2e2; }
+
+/* Boş durumu */
+.br-empty{
+  text-align:center;
+  padding:60px 20px;
+  color:#9ca3af;
+}
+.br-empty i{ font-size:42px; margin-bottom:14px; color:#d1d5db; }
+.br-empty h3{ font-size:18px; color:#6b7280; margin-bottom:6px; font-weight:700; }
+.br-empty p{ font-size:14px; }
+
+/* CTA: Bize katılın */
+.join-cta{
+  margin-top:60px;
+  background:linear-gradient(135deg,#b24545 0%,#8e3636 100%);
+  border-radius:24px;
+  padding:48px 40px;
+  color:#fff;
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:32px;
+  align-items:center;
+  position:relative;
+  overflow:hidden;
+}
+.join-cta::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background-image:radial-gradient(circle at 90% 20%,rgba(255,255,255,.12),transparent 50%),radial-gradient(circle at 10% 90%,rgba(58,95,11,.25),transparent 60%);
+}
+@media(max-width:780px){
+  .join-cta{ grid-template-columns:1fr; padding:32px 24px; text-align:center; gap:20px; }
+}
+.join-cta > *{ position:relative; z-index:2; }
+.join-cta h2{
+  font-family:Georgia,serif;
+  font-size:clamp(24px,3vw,34px);
+  margin-bottom:12px;
+  line-height:1.25;
+  font-weight:700;
+}
+.join-cta p{
+  font-size:15px;
+  opacity:.95;
+  line-height:1.65;
+  margin-bottom:20px;
+}
+.join-cta .badge{
+  display:inline-block;
+  background:rgba(255,255,255,.2);
+  padding:6px 14px;
+  border-radius:100px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.6px;
+  margin-bottom:14px;
+  text-transform:uppercase;
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.25);
+}
+.join-cta-features{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 20px;
+  margin-bottom:24px;
+  font-size:13px;
+}
+.join-cta-features span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.join-cta-features i{ color:#fbbf24; }
+.join-cta-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+@media(max-width:780px){ .join-cta-actions{ justify-content:center; } }
+.join-btn{
+  padding:13px 22px;
+  border-radius:12px;
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  text-decoration:none;
+  transition:transform .12s,box-shadow .15s;
+  border:none;
+  cursor:pointer;
+  font-family:inherit;
+}
+.join-btn-primary{
+  background:#fff;
+  color:#b24545;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+}
+.join-btn-primary:hover{ transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,0,0,.25); }
+.join-btn-ghost{
+  background:transparent;
+  color:#fff;
+  border:1.5px solid rgba(255,255,255,.4);
+}
+.join-btn-ghost:hover{ background:rgba(255,255,255,.12); }
+
+.join-cta-visual{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.join-cta-icon{
+  font-size:140px;
+  color:rgba(255,255,255,.18);
+  text-shadow:0 8px 30px rgba(0,0,0,.2);
+}
+@media(max-width:780px){
+  .join-cta-icon{ font-size:80px; }
+}
+
+/* Hover map preview (opsiyonel) */
+.br-mappreview{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.85);
+  z-index:9999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.br-mappreview.show{ display:flex; }
+.br-mappreview-box{
+  background:#fff;
+  border-radius:16px;
+  max-width:900px;
+  width:100%;
+  overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.br-mappreview-head{
+  padding:18px 22px;
+  border-bottom:1px solid #e5e7eb;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.br-mappreview-head h3{
+  font-family:Georgia,serif;
+  font-size:17px;
+  color:#1f2937;
+}
+.br-mappreview-close{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  background:#fee2e2;
+  color:#dc2626;
+  border:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.br-mappreview-close:hover{ background:#fecaca; }
+.br-mappreview-body iframe{
+  width:100%;
+  height:480px;
+  border:none;
+  display:block;
+}
+";
+require __DIR__ . '/includes/header.php';
 ?>
-<!doctype html>
-<html lang="tr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Le Monde Du Tacos – Le Goût Authentique du French Tacos - Şubeler</title>
 
-  <!-- Font Awesome (model-2 ikonları için) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-
-  <style>
-    :root{
-      --brand:#3A5F0B;
-      --brand2:#b24545;
-      --ink:#1f2937;
-      --muted:#6b7280;
-      --bg:#ffffff;
-      --shadow: 0 10px 30px rgba(0,0,0,.18);
-      --ring: rgba(255,255,255,.7);
-      --ring2: rgba(0,0,0,.35);
-      --max: 1180px;
-    }
-
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      overflow: hidden;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color:var(--ink);
-      background:var(--bg);
-    }
-    a{ color:inherit; text-decoration:none; }
-    button{ font:inherit; }
-
-    /* ======= TOP BAR ======= */
-    .topbar{
-      position: sticky;
-      top:0;
-      z-index:999;
-      background:#fff;
-    }
-    .topbar-inner{
-      max-width: var(--max);
-      margin:0 auto;
-      padding: 14px 18px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-
-    .brand{
-      position:relative;
-      display:flex;
-      align-items:center;
-      gap:2px;
-      min-width: 220px;
-    }
-
-    .logo-wrapper{
-      width:50px;
-      height:50px;
-      margin-left: 80px;
-      position:relative;
-    }
-
-    .brand-logo{
-      position:absolute;
-      height:170px;
-      width:auto;
-      left:50%;
-      transform:translateX(-70%);
-      top:-40px;
-      pointer-events:none;
-    }
-
-    .brand-text{
-      margin-top: 20px;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-    }
-
-    .brand .logo{
-      font-family: Georgia, serif;
-      font-size:28px;
-      line-height:1;
-      color:#3A5F0B;
-      font-weight:700;
-    }
-
-    .nav{
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-    .nav a{
-      padding: 9px 12px;
-      border-radius: 6px;
-      font-family: 'Retrim', sans-serif;
-      font-weight: 400;
-      font-size: 12px;
-      letter-spacing:.6px;
-      text-transform: uppercase;
-      color:#1f2937;
-      white-space: nowrap;
-      position: relative;
-      overflow: hidden;
-      transition: all .25s ease;
-    }
-
-    .nav a.active{
-      background: var(--brand);
-      color:#fff;
-      box-shadow: 0 6px 18px rgba(139,45,45,.25);
-    }
-
-    .nav a:not(.active):hover{
-      background: var(--brand);
-      color:#fff;
-      box-shadow: 0 6px 18px rgba(139,45,45,.35);
-    }
-
-    .nav a::after{
-      content:"";
-      position:absolute;
-      top:0;
-      left:-75%;
-      width:50%;
-      height:100%;
-      background: linear-gradient(
-        120deg,
-        transparent 0%,
-        rgba(255,255,255,.6) 50%,
-        transparent 100%
-      );
-      transform: skewX(-20deg);
-    }
-
-    .nav a:not(.active):hover::after{
-      animation: shine 1.6s ease forwards;
-    }
-
-    @keyframes shine{
-      0%{ left:-75%; }
-      100%{ left:130%; }
-    }
-
-    .nav a.active:hover{
-      background: var(--brand);
-      color:#fff;
-    }
-
-    /* Mobil hamburger */
-    .hamburger{
-      display:none;
-      width:44px;
-      height:40px;
-      border:1px solid rgba(0,0,0,.12);
-      border-radius:10px;
-      background:#fff;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      z-index: 9999;
-    }
-    .hamburger span{
-      display:block;
-      width:18px; height:2px;
-      background:#111827;
-      position:relative;
-    }
-    .hamburger span::before,
-    .hamburger span::after{
-      content:"";
-      position:absolute; left:0;
-      width:18px; height:2px;
-      background:#111827;
-    }
-    .hamburger span::before{ top:-6px; }
-    .hamburger span::after{ top:6px; }
-
-    /* ======= HERO ======= */
-    .hero{
-      position:relative;
-      background: url("static/img/locations1.jpg") center center / cover no-repeat;
-      transform: none;
-      transform-origin: center;
-      overflow:hidden;
-      rotate: -2deg;
-      scale: 1.02;
-      width: 104vw;
-      margin-left: calc(50% - 52vw);
-      z-index: 999;
-      height: calc(100vh - 160px);
-      display: flex;
-      align-items: center;
-    }
-
-    .hero::after{
-      content:"";
-      position:absolute;
-      inset:0;
-      z-index:1;
-      background: linear-gradient(180deg,
-        rgba(0,0,0,.12) 0%,
-        rgba(0,0,0,.25) 55%,
-        rgba(0,0,0,.35) 100%);
-      pointer-events:none;
-    }
-
-    .hero::before{
-      content:"";
-      position:absolute;
-      top:0; left:0; right:0;
-      height:6px;
-      background: linear-gradient(90deg, rgba(139,45,45,.9), rgba(200,86,86,.8), rgba(139,45,45,.9));
-      opacity:.95;
-      z-index:2;
-      pointer-events:none;
-    }
-
-    /* ======= BOTTOM ICON STRIP ======= */
-    .strip{
-      position:absolute;
-      left:0; right:0; bottom:0;
-      background: linear-gradient(180deg, rgba(178,69,69,.05), rgba(139, 45, 45, 0.904));
-      padding: 26px 16px 18px;
-      z-index:3;
-    }
-    .strip-inner{
-      max-width: var(--max);
-      margin:0 auto;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      gap:34px;
-      flex-wrap: wrap;
-    }
-
-    .icon-card{
-      width: 140px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:10px;
-      color:#fff;
-      text-align:center;
-      user-select:none;
-    }
-    .icon-btn{
-      width: 86px;
-      height: 86px;
-      border-radius: 50%;
-      display:grid;
-      place-items:center;
-      background: rgba(17,24,39,.28);
-      border: 2px solid rgba(255,255,255,.25);
-      box-shadow:
-        inset 0 0 0 3px rgba(0,0,0,.25),
-        0 12px 30px rgba(0,0,0,.28);
-      transition: transform .15s ease, background .15s ease;
-      cursor:pointer;
-    }
-    .icon-btn:hover{
-      transform: translateY(-2px);
-      background: rgba(17,24,39,.40);
-    }
-
-    .icon-label{
-      font-weight:800;
-      letter-spacing:.6px;
-      font-size: 12px;
-      text-transform: uppercase;
-      text-shadow: 0 2px 10px rgba(0,0,0,.35);
-    }
-
-    .ico{
-      width:40px; height:40px;
-      opacity:.95;
-      filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
-    }
-
-    /* ======= FOOTER ======= */
-    .footer{
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 18px 18px 26px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:14px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    /* ======= MODEL-2 (Footer Social) — only needed CSS ======= */
-    .social-nav{
-      padding:0;
-      margin:0;
-      list-style:none;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .social-nav li{ display:inline-block; }
-
-    .social-nav a{
-      display:inline-block;
-      width:36px;
-      height:36px;
-      line-height:36px;
-      text-align:center;
-      color:#fff;
-      text-decoration:none;
-      background:#000;
-      border-radius:8px;
-      position:relative;
-      transition: .35s ease;
-      overflow:hidden;
-      font-size:18px;
-    }
-
-    .model-2 a{
-      overflow:hidden;
-      font-size:20px;
-      border-radius:10px;
-      margin:0;
-    }
-    .model-2 a:hover{
-      background:#fff;
-      text-shadow:
-        0px 0px #d5d5d5, 1px 1px #d5d5d5, 2px 2px #d5d5d5, 3px 3px #d5d5d5,
-        4px 4px #d5d5d5, 5px 5px #d5d5d5, 6px 6px #d5d5d5, 7px 7px #d5d5d5,
-        8px 8px #d5d5d5, 9px 9px #d5d5d5, 10px 10px #d5d5d5;
-    }
-
-    .model-2 .facebook{
-      background:#3B579D;
-      text-shadow: 0 0 #2d4278, 1px 1px #2d4278, 2px 2px #2d4278, 3px 3px #2d4278,
-                   4px 4px #2d4278, 5px 5px #2d4278, 6px 6px #2d4278, 7px 7px #2d4278;
-    }
-    .model-2 .facebook:hover{ color:#3B579D; }
-
-    .model-2 .instagram{
-      background:#E1306C;
-      text-shadow: 0 0 #b12353, 1px 1px #b12353, 2px 2px #b12353, 3px 3px #b12353,
-                   4px 4px #b12353, 5px 5px #b12353, 6px 6px #b12353, 7px 7px #b12353;
-    }
-    .model-2 .instagram:hover{ color:#E1306C; }
-
-    .model-2 .twitter{
-      background:#111827;
-      text-shadow: 0 0 #0b1220, 1px 1px #0b1220, 2px 2px #0b1220, 3px 3px #0b1220,
-                   4px 4px #0b1220, 5px 5px #0b1220, 6px 6px #0b1220, 7px 7px #0b1220;
-    }
-    .model-2 .twitter:hover{ color:#111827; }
-
-    .model-2 .youtube{
-      background:#FF0000;
-      text-shadow: 0 0 #c40000, 1px 1px #c40000, 2px 2px #c40000, 3px 3px #c40000,
-                   4px 4px #c40000, 5px 5px #c40000, 6px 6px #c40000, 7px 7px #c40000;
-    }
-    .model-2 .youtube:hover{ color:#FF0000; }
-
-    /* ======= MOBILE ======= */
-    @media (max-width: 860px){
-      body{ overflow-x:hidden; overflow-y:auto; }
-      .brand{ min-width:auto; }
-      .hamburger{ display:flex; }
-      .nav{
-        position:absolute;
-        top:70px; right:12px; left:12px;
-        background:#fff;
-        border:1px solid rgba(0,0,0,.10);
-        border-radius:14px;
-        box-shadow:var(--shadow);
-        padding:10px;
-        display:none;
-        flex-direction:column;
-        align-items:stretch;
-        gap:6px;
-        z-index:9998;
-      }
-      .nav.open{ display:flex; }
-      .nav a{ padding:12px 12px; }
-      .topbar{
-        z-index:9999;
-      }
-      .hero{
-        rotate:0deg;
-        scale:1;
-        height:auto;
-        min-height:100vh;
-        overflow:hidden;
-        display:flex;
-        align-items:center;
-        padding:24px 14px 40px;
-      }
-
-      .hero-grid{
-        position:relative !important;
-        top:auto !important;
-        left:auto !important;
-        transform:none !important;
-        width:100% !important;
-        grid-template-columns:1fr !important;
-        gap:14px;
-      }
-
-      .strip{ padding:20px 14px 14px; }
-      .strip-inner{ gap:16px; }
-      .icon-card{ width:44%; max-width:170px; }
-      .icon-btn{ width:78px; height:78px; }
-
-      .topbar-inner{
-        padding: 8px 14px;
-      }
-
-      .logo-wrapper{
-        margin-left: 20px;
-      }
-
-      .brand-logo{
-        height: 90px;
-        top: -16px;
-      }
-
-      .brand .logo{
-        font-size: 20px;
-      }
-
-      .brand-text{
-        margin-top: 12px;
-      }
-    }
-
-    @media (max-width: 480px){
-      .topbar-inner{ padding:10px 14px; }
-      .hero{ padding:16px 12px 80px; }
-      .grid-box{ padding:16px 18px; font-size:14px; }
-      .grid-box strong{ font-size:15px; margin-bottom:8px; }
-    }
-
-    @media (max-width: 420px){
-      .icon-card{ width:48%; }
-      .footer{ flex-direction:column; align-items:flex-start; }
-    }
-
-    /* =========================
-       STRIP ICON: BÜYÜME + PARLAMA + SHINE
-       ========================= */
-
-    .icon-card{ position:relative; }
-
-    .icon-btn{
-      position: relative;
-      overflow: hidden;
-      transform: translateZ(0);
-      transition: transform .22s ease, box-shadow .22s ease, background .22s ease, border-color .22s ease;
-      will-change: transform, box-shadow;
-    }
-
-    .icon-btn::before{
-      content:"";
-      position:absolute;
-      inset:-10px;
-      border-radius:999px;
-      background: radial-gradient(circle at 30% 30%,
-        rgba(255,255,255,.45) 0%,
-        rgba(255,255,255,.18) 25%,
-        rgba(255,255,255,0) 62%);
-      opacity:0;
-      filter: blur(10px);
-      transition: opacity .22s ease;
-      pointer-events:none;
-    }
-
-    .icon-btn::after{
-      content:"";
-      position:absolute;
-      top:-20%;
-      left:-80%;
-      width:55%;
-      height:140%;
-      border-radius:999px;
-      background: linear-gradient(120deg,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,.75) 45%,
-        rgba(255,255,255,0) 70%);
-      transform: skewX(-20deg);
-      opacity:0;
-      pointer-events:none;
-    }
-
-    .icon-card:hover .icon-btn{
-      transform: translateY(-4px) scale(1.10);
-      background: rgba(255,255,255,.12);
-      border-color: rgba(255,255,255,.55);
-      box-shadow:
-        0 18px 38px rgba(0,0,0,.38),
-        0 0 0 2px rgba(255,255,255,.12),
-        0 0 28px rgba(255,255,255,.25);
-    }
-
-    .icon-card:hover .icon-btn::before{
-      opacity:1;
-    }
-
-    .icon-card:hover .icon-btn::after{
-      opacity:.95;
-      animation: iconShine2 .75s ease forwards;
-    }
-
-    @keyframes iconShine2{
-      0%   { left:-80%; }
-      100% { left:140%; }
-    }
-
-    .icon-card:hover .ico{
-      transform: scale(1.08);
-      transition: transform .22s ease;
-    }
-
-    .icon-btn:active{
-      transform: translateY(-2px) scale(1.04);
-    }
-
-    @media (hover:none){
-      .icon-btn:active::before{ opacity:1; }
-      .icon-btn:active::after{
-        opacity:.95;
-        animation: iconShine2 .75s ease forwards;
-      }
-    }
-
-    /* ===============================
-       HERO ORTA ADRES GRID (2x3)
-       =============================== */
-
-    .hero{
-      position:relative;
-    }
-
-    .hero-grid{
-      position:relative;
-      z-index:5;
-      width:min(1050px, 92%);
-      margin:0 auto;
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:12px;
-    }
-
-    /* ===============================
-       KART TASARIMI (Glass Premium)
-       =============================== */
-
-    .grid-box{
-      position:relative;
-      padding:14px 18px;
-      border-radius:14px;
-      cursor:pointer;
-      background:rgba(255,255,255,.10);
-      backdrop-filter:blur(14px);
-      -webkit-backdrop-filter:blur(14px);
-      border:1px solid rgba(255,255,255,.35);
-      color:#fff;
-      line-height:1.5;
-      font-size:13px;
-      font-weight:500;
-      box-shadow:
-        0 15px 35px rgba(0,0,0,.35),
-        inset 0 0 0 1px rgba(255,255,255,.15);
-      transition:
-        transform .25s ease,
-        box-shadow .25s ease,
-        background .25s ease,
-        border-color .25s ease;
-      overflow:hidden;
-      text-decoration:none;
-      cursor:pointer;
-    }
-
-    .grid-box strong{
-      display:block;
-      font-size:15px;
-      font-weight:700;
-      margin-bottom:6px;
-      letter-spacing:.4px;
-    }
-
-    .grid-box:hover{
-      transform:translateY(-6px) scale(1.03);
-      background:rgba(255,255,255,.18);
-      border-color:rgba(255,255,255,.55);
-      box-shadow:
-        0 25px 45px rgba(0,0,0,.45),
-        0 0 25px rgba(255,255,255,.25);
-    }
-
-    .grid-box::after{
-      content:"";
-      position:absolute;
-      top:-20%;
-      left:-80%;
-      width:60%;
-      height:150%;
-      background:linear-gradient(
-        120deg,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,.75) 45%,
-        rgba(255,255,255,0) 70%
-      );
-      transform:skewX(-20deg);
-      opacity:0;
-      pointer-events:none;
-    }
-
-    .grid-box:hover::after{
-      opacity:.9;
-      animation:gridShine .9s ease forwards;
-    }
-
-    @keyframes gridShine{
-      0%   { left:-80%; }
-      100% { left:130%; }
-    }
-
-    @media (max-width:1024px){
-      .hero-grid{
-        gap:18px;
-      }
-    }
-
-    @media (max-width:860px){
-      .hero-grid{
-        grid-template-columns:1fr;
-        gap:16px;
-      }
-    }
-
-    @media (max-width:480px){
-      .grid-box{
-        padding:18px 20px;
-        font-size:14px;
-      }
-
-      .grid-box strong{
-        font-size:16px;
-      }
-    }
-
-    .grid-box .box-inner{
-      display:flex;
-      gap:14px;
-      align-items:flex-start;
-    }
-
-    .grid-box .pin{
-      flex:0 0 auto;
-      width:46px;
-      height:46px;
-      border-radius:14px;
-      display:grid;
-      place-items:center;
-      background: rgba(255,255,255,.16);
-      border: 1px solid rgba(255,255,255,.30);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
-      transform: translateY(2px);
-    }
-
-    .grid-box .pin svg{
-      width:22px;
-      height:22px;
-      fill:#fff;
-      filter: drop-shadow(0 6px 12px rgba(0,0,0,.35));
-    }
-
-    .grid-box .box-text{
-      min-width:0;
-    }
-
-    .grid-box .addr{
-      opacity:.95;
-    }
-
-    .grid-box .hint{
-      margin-top:10px;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      font-size:12px;
-      font-weight:700;
-      letter-spacing:.5px;
-      text-transform:uppercase;
-      opacity:.92;
-    }
-
-    .grid-box .hint i{
-      font-size:12px;
-      opacity:.9;
-    }
-
-    .grid-box:hover .pin{
-      background: rgba(255,255,255,.22);
-      border-color: rgba(255,255,255,.55);
-      transform: translateY(0);
-    }
-
-    @keyframes mobileCardShine {
-      0%, 72%  { left:-80%; opacity:0; }
-      75%       { opacity:.85; }
-      90%       { left:140%; opacity:.85; }
-      100%      { left:140%; opacity:0; }
-    }
-
-    @media (max-width: 860px) {
-      .grid-box::after {
-        animation: mobileCardShine 5s ease-in-out infinite !important;
-        animation-delay: var(--shine-delay, 0s) !important;
-        opacity: 0;
-      }
-      .grid-box:active {
-        transform: translateY(-4px) scale(1.02);
-        background: rgba(255,255,255,.18);
-        border-color: rgba(255,255,255,.55);
-      }
-    }
-
-    /* ===============================
-       DAKTİLO YAZI EFEKTİ
-       =============================== */
-
-    .type-target{
-      white-space:pre-line;
-      min-height: 132px;
-    }
-
-    .type-target strong{
-      display:block;
-      min-height: 30px;
-    }
-
-    .type-caret{
-      display:inline-block;
-      width:10px;
-      margin-left:2px;
-      color:#fff;
-      animation: blinkCaret .8s step-end infinite;
-      font-weight:700;
-    }
-
-    @keyframes blinkCaret{
-      0%, 50%{ opacity:1; }
-      50.01%, 100%{ opacity:0; }
-    }
-
-    .grid-box.typing-active .type-target{
-      text-shadow: 0 1px 8px rgba(0,0,0,.18);
-    }
-    @media (max-width: 860px){
-  .logo-wrapper{
-    width: 40px !important;
-    height: 40px !important;
-    margin-left: 30px !important;
-    position: relative !important;
-    flex: 0 0 40px !important;
-  }
-
-  .brand-logo{
-    position: absolute !important;
-    height: 90px !important;
-    width: auto !important;
-    left: 50% !important;
-    top: -16px !important;
-    transform: translateX(-70%) !important;
-    pointer-events: none !important;
-  }
-}
-@media (max-width: 860px){
-  .grid-box{
-    padding: 14px 16px !important;
-    border-radius: 14px;
-    font-size: 13px !important;
-    line-height: 1.45 !important;
-    min-height: auto !important;
-  }
-
-  .grid-box strong{
-    font-size: 15px !important;
-    margin-bottom: 6px !important;
-  }
-
-  .type-target{
-    min-height: 78px !important;
-  }
-
-  .grid-box .box-inner{
-    gap: 10px !important;
-  }
-
-  .grid-box .pin{
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-  }
-
-  .grid-box .pin svg{
-    width: 18px !important;
-    height: 18px !important;
-  }
-
-  .grid-box .hint{
-    margin-top: 6px !important;
-    font-size: 11px !important;
-  }
-}
-
-@media (max-width: 480px){
-  .grid-box{
-    padding: 12px 14px !important;
-    font-size: 12px !important;
-    line-height: 1.4 !important;
-  }
-
-  .grid-box strong{
-    font-size: 14px !important;
-    margin-bottom: 5px !important;
-  }
-
-  .type-target{
-    min-height: 66px !important;
-  }
-
-  .grid-box .pin{
-    width: 34px !important;
-    height: 34px !important;
-  }
-
-  .grid-box .pin svg{
-    width: 16px !important;
-    height: 16px !important;
-  }
-}
-  </style>
-</head>
-
-<body>
-  <!-- TOP -->
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="/index.php">
-        <div class="logo-wrapper">
-          <img class="brand-logo" src="/static/img/logos/LMD LOGOArtboard1.png" alt="TACOS Logo">
-        </div>
-        <div class="brand-text">
-          <div class="logo" style="font-style: italic">Le Monde Du Tacos</div>
-        </div>
-      </a>
-
-      <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat">
-        <span></span>
-      </button>
-
-      <nav class="nav" id="nav">
-        <a href="/index.php">ANASAYFA</a>
-        <a href="/kurumsal.php">KURUMSAL</a>
-        <a class="active" href="/subeler.php">ŞUBELER</a>
-        <a href="/kampanyalar.php">KAMPANYALAR</a>
-        <a href="/franchise.php">FRANCHISE</a>
-        <a href="/iletisim.php">İLETİŞİM</a>
-      </nav>
+<main role="main">
+
+  <!-- Sayfa banner'ı -->
+  <section class="page-banner">
+    <div class="pb-inner">
+      <span class="tag"><i class="fa-solid fa-location-dot" style="margin-right:6px"></i>ŞUBELERİMİZ</span>
+      <h1>Size En Yakın Lezzet Durağı</h1>
+      <p>Türkiye'nin dört bir yanında büyüyen Le Monde Du Tacos ailesinin <?= count($branches) ?> şubesinden birini ziyaret edin — özgün French Tacos lezzetimizi tadın.</p>
     </div>
-  </header>
+  </section>
 
-  <!-- HERO -->
-  <main class="hero" role="main" aria-label="Ana görsel alanı">
-    <div class="hero-grid">
-
-      <?php foreach ($branches as $b):
-        // Adres çok uzunsa ", " ile bölüp ilk kısmı başlık altına koy, gerisini birleştir
-        $addr = trim($b['address'] ?? '');
-        $parts = array_map('trim', explode(',', $addr));
-        // İlk 2-3 parçayı 1. satır, geri kalanını 2. satır yap
-        if (count($parts) >= 4) {
-          $line1 = implode(', ', array_slice($parts, 0, 2));
-          $line2 = implode(', ', array_slice($parts, 2, count($parts) - 3));
-          $line3 = end($parts);
-          $lines = trim($line1) . '|' . trim($line2) . '|' . trim($line3);
-        } elseif (count($parts) >= 2) {
-          $line1 = $parts[0];
-          $line2 = implode(', ', array_slice($parts, 1));
-          $lines = trim($line1) . '|' . trim($line2);
-        } else {
-          $lines = $addr;
-        }
-      ?>
-      <div class="grid-box"
-           data-map="<?= e($b['map_url'] ?: '#') ?>"
-           data-title="<?= e($b['title']) ?>"
-           data-lines="<?= e($lines) ?>">
-        <div class="type-target"><strong><?= e($b['title']) ?></strong><br><?= nl2br(e(str_replace('|', "\n", $lines))) ?></div>
+  <!-- İstatistik şeridi -->
+  <div class="stats-bar">
+    <div class="stats-bar-inner">
+      <div class="stat-cell">
+        <div class="stat-num"><?= count($branches) ?></div>
+        <div class="stat-lbl">Aktif Şube</div>
       </div>
-      <?php endforeach; ?>
-
-    </div>
-  </main>
-
-  <!-- FOOTER -->
-  <footer class="footer">
-  <ul class="social-nav model-2" aria-label="Sosyal medya">
-    <li><a class="facebook" href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a></li>
-    <li><a class="instagram" href="https://www.instagram.com/lemondedutacos__?igsh=MWIzMDRzaWw0azhkbA%3D%3D&utm_source=qr" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a></li>
-    <li><a class="twitter" href="#" aria-label="Twitter/X"><i class="fa-brands fa-x-twitter"></i></a></li>
-    <li><a class="youtube" href="#" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a></li>
-  </ul>
-  <nav class="footer-legal" aria-label="Yasal sayfalar">
-    <a href="/kvkk.php">KVKK</a>
-    <span>·</span>
-    <a href="/cerez-politikasi.php">Çerez Politikası</a>
-    <span>·</span>
-    <a href="/gizlilik-politikasi.php">Gizlilik Politikası</a>
-  </nav>
-  <div class="footer-meta">
-    <div style="font-weight:bold;font-family:'Georgia',serif;">
-      Copyright © 2026 <span style="font-style:italic;text-decoration:underline;">Tüm Hakları Saklıdır</span>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px;">
-      Tasarım &amp; Geliştirme: <a href="https://www.codega.com.tr" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700;text-decoration:none;">CODEGA</a>
+      <div class="stat-cell">
+        <div class="stat-num"><?= count($cities) ?: 1 ?></div>
+        <div class="stat-lbl">Şehir</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">7/24</div>
+        <div class="stat-lbl">Online Sipariş</div>
+      </div>
     </div>
   </div>
-</footer>
-<style>
-.footer{max-width:1280px !important;margin:0 auto !important;padding:22px 36px 26px !important;display:flex !important;align-items:center !important;justify-content:space-between !important;gap:48px !important;flex-wrap:wrap}
-.footer > .social-nav,.footer > .footer-meta{flex:0 0 auto;display:flex;align-items:center}.footer > .footer-legal{flex:1 1 auto;display:flex;align-items:center;min-width:0}
-.footer > .social-nav{justify-content:flex-start}
-.footer > .footer-legal{justify-content:center;align-items:center;gap:10px;font-size:12px;white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
-.footer > .footer-meta{justify-content:flex-end;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;white-space:nowrap}
-.footer-legal a{color:var(--muted);text-decoration:none;transition:color .2s}
-.footer-legal a:hover{color:var(--brand);text-decoration:underline}
-.footer-legal span{color:var(--muted);opacity:.5}
-@media(max-width:940px){
-  .footer{flex-direction:column !important;gap:14px !important;padding:18px 16px !important;text-align:center}
-  .footer > *{flex:none !important;justify-content:center !important;width:100%}
-  .footer > .footer-meta{align-items:center !important;text-align:center}
-}
-</style>
 
-  <script>
-    const btn = document.getElementById("hamburger");
-    const nav = document.getElementById("nav");
+  <section class="br-section">
+    <div class="br-section-head">
+      <h2><i class="fa-solid fa-store"></i>Tüm Şubelerimiz</h2>
+      <div class="br-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="brSearch" placeholder="Şube veya semt ara…">
+      </div>
+    </div>
 
-    btn?.addEventListener("click", () => nav.classList.toggle("open"));
+    <?php if (count($cities) > 1): ?>
+    <div class="city-filter" id="cityFilter">
+      <button class="city-chip active" data-city="">Tümü</button>
+      <?php foreach ($cities as $c): ?>
+        <button class="city-chip" data-city="<?= e(strtolower($c)) ?>"><?= e($c) ?></button>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
-    document.addEventListener("click", (e) => {
-      if (!nav.classList.contains("open")) return;
-      const within = nav.contains(e.target) || btn.contains(e.target);
-      if (!within) nav.classList.remove("open");
-    });
-  </script>
+    <?php if (empty($branches)): ?>
+      <div class="br-empty">
+        <i class="fa-solid fa-store-slash"></i>
+        <h3>Henüz şube yok</h3>
+        <p>Yakında bulunduğunuz şehirde de hizmetinizdeyiz.</p>
+      </div>
+    <?php else: ?>
+    <div class="br-grid" id="brGrid">
+      <?php foreach ($branches as $b):
+        $city     = trim($b['city'] ?? '');
+        $district = trim($b['district'] ?? '');
+        $address  = trim($b['address'] ?? '');
+        $phone    = trim($b['phone'] ?? '');
+        $hours    = trim($b['work_hours'] ?? '');
+        $mapUrl   = trim($b['map_url'] ?? '');
+        $mapEmbed = trim($b['map_embed'] ?? '');
+        $phoneTel = $phone ? preg_replace('/[^0-9+]/', '', $phone) : '';
+        $searchKey = strtolower($b['title'] . ' ' . $city . ' ' . $district . ' ' . $address);
+      ?>
+      <article class="br-card" data-search="<?= e($searchKey) ?>" data-city="<?= e(strtolower($city)) ?>">
+        <div class="br-card-img">
+          <?php if ($city): ?><div class="br-card-city"><?= e($city) ?></div><?php endif; ?>
+          <i class="fa-solid fa-utensils"></i>
+        </div>
+        <div class="br-card-body">
+          <h3 class="br-card-title"><?= e($b['title']) ?></h3>
+          <?php if ($district): ?>
+            <div class="br-card-district"><?= e($district) ?></div>
+          <?php endif; ?>
 
-  <script>
-    document.querySelectorAll(".grid-box").forEach(box => {
-      box.addEventListener("click", () => {
-        const url = box.getAttribute("data-map");
-        if (url) {
-          window.open(url, "_blank");
-        }
-      });
-    });
-  </script>
+          <?php if ($address): ?>
+          <div class="br-detail">
+            <i class="fa-solid fa-location-dot"></i>
+            <div><?= e($address) ?></div>
+          </div>
+          <?php endif; ?>
 
-  <script>
-    function applyShineDelays() {
-      if (window.innerWidth <= 860) {
-        const boxes = document.querySelectorAll('.grid-box');
-        boxes.forEach((box, i) => {
-          const delay = (i * (5 / boxes.length)).toFixed(2);
-          box.style.setProperty('--shine-delay', delay + 's');
-        });
-      }
-    }
-    applyShineDelays();
-    window.addEventListener('resize', applyShineDelays);
-  </script>
+          <?php if ($phone): ?>
+          <div class="br-detail">
+            <i class="fa-solid fa-phone"></i>
+            <div><a href="tel:<?= e($phoneTel) ?>"><?= e($phone) ?></a></div>
+          </div>
+          <?php endif; ?>
 
-  <script>
-    function escapeHtml(text) {
-      return text
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+          <?php if ($hours): ?>
+          <div class="br-detail">
+            <i class="fa-solid fa-clock"></i>
+            <div><?= e($hours) ?></div>
+          </div>
+          <?php endif; ?>
 
-    function buildTypingHtml(title, lines, typedCount) {
-      const fullText = title + "\n" + lines.join("\n");
-      const visibleText = fullText.slice(0, typedCount);
+          <div class="br-card-foot">
+            <?php if ($mapUrl): ?>
+              <a class="br-btn br-btn-map" href="<?= e($mapUrl) ?>" target="_blank" rel="noopener">
+                <i class="fa-solid fa-map-location-dot"></i> Yol Tarifi
+              </a>
+            <?php endif; ?>
+            <?php if ($phone): ?>
+              <a class="br-btn br-btn-call" href="tel:<?= e($phoneTel) ?>">
+                <i class="fa-solid fa-phone"></i> Ara
+              </a>
+            <?php endif; ?>
+          </div>
+        </div>
+      </article>
+      <?php endforeach; ?>
+    </div>
 
-      let titlePart = "";
-      let bodyPart = "";
+    <div class="br-empty" id="brEmpty" style="display:none">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <h3>Sonuç bulunamadı</h3>
+      <p>Arama kriterlerine uygun şube yok. Filtreyi değiştirip tekrar deneyin.</p>
+    </div>
+    <?php endif; ?>
 
-      if (visibleText.length <= title.length) {
-        titlePart = visibleText;
-      } else {
-        titlePart = title;
-        bodyPart = visibleText.slice(title.length + 1);
-      }
+    <!-- Bize Katılın CTA -->
+    <div class="join-cta">
+      <div>
+        <span class="badge"><i class="fa-solid fa-handshake" style="margin-right:6px"></i>FRANCHISE</span>
+        <h2>Bir Sonraki Şube Sizin Olabilir mi?</h2>
+        <p>
+          Türkiye'nin en hızlı büyüyen French Tacos markasına katılın. Güçlü marka desteği,
+          kanıtlanmış iş modeli ve kapsamlı eğitim sistemiyle kendi şubenizi açma yolculuğunda yanınızdayız.
+        </p>
 
-      const bodyHtml = bodyPart
-        .split("\n")
-        .filter(Boolean)
-        .join("<br>");
+        <div class="join-cta-features">
+          <span><i class="fa-solid fa-check"></i> Lokasyon Analizi</span>
+          <span><i class="fa-solid fa-check"></i> Tam Operasyon Desteği</span>
+          <span><i class="fa-solid fa-check"></i> Pazarlama Yönetimi</span>
+          <span><i class="fa-solid fa-check"></i> Profesyonel Eğitim</span>
+        </div>
 
-      return `
-        <strong>${escapeHtml(titlePart)}</strong>
-        ${bodyHtml}
-      `;
-    }
+        <div class="join-cta-actions">
+          <a href="/franchise.php" class="join-btn join-btn-primary">
+            <i class="fa-solid fa-paper-plane"></i> Hemen Başvuru Yap
+          </a>
+          <a href="/iletisim.php" class="join-btn join-btn-ghost">
+            <i class="fa-solid fa-message"></i> Bilgi Al
+          </a>
+        </div>
+      </div>
+      <div class="join-cta-visual">
+        <i class="fa-solid fa-store join-cta-icon"></i>
+      </div>
+    </div>
+  </section>
+</main>
 
-    function typeBox(box, delay = 0) {
-      const target = box.querySelector(".type-target");
-      const title = box.dataset.title || "";
-      const lines = (box.dataset.lines || "").split("|");
-      const fullText = title + "\n" + lines.join("\n");
+<!-- Map preview overlay (modal) -->
+<div class="br-mappreview" id="brMapModal">
+  <div class="br-mappreview-box">
+    <div class="br-mappreview-head">
+      <h3 id="brMapTitle">Şube Konumu</h3>
+      <button class="br-mappreview-close" onclick="document.getElementById('brMapModal').classList.remove('show')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="br-mappreview-body" id="brMapBody"></div>
+  </div>
+</div>
 
-      let i = 0;
-      box.classList.add("typing-active");
-      target.innerHTML = `<strong></strong><span class="type-caret">|</span>`;
-
-      setTimeout(() => {
-        const timer = setInterval(() => {
-          i++;
-          target.innerHTML = buildTypingHtml(title, lines, i) + `<span class="type-caret">|</span>`;
-
-          if (i >= fullText.length) {
-            clearInterval(timer);
-            setTimeout(() => {
-              target.innerHTML = buildTypingHtml(title, lines, fullText.length);
-              box.classList.remove("typing-active");
-            }, 500);
-          }
-        }, 18);
-      }, delay);
-    }
-
-    function startTypingSequence() {
-      const boxes = document.querySelectorAll(".grid-box");
-      boxes.forEach((box, index) => {
-        typeBox(box, index * 250);
-      });
-    }
-
-    window.addEventListener("load", startTypingSequence);
-  </script>
-
-<button class="scroll-top" id="scrollTop" aria-label="Yukarı çık" type="button">
-  <i class="fa-solid fa-chevron-up"></i>
-</button>
-<style>
-.scroll-top{position:fixed;bottom:24px;right:24px;width:46px;height:46px;border-radius:50%;background:var(--brand);color:#fff;border:none;cursor:pointer;z-index:1000;display:flex;align-items:center;justify-content:center;font-size:16px;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .25s,transform .25s,visibility .25s,background .2s;box-shadow:0 6px 16px rgba(0,0,0,.18)}
-.scroll-top.visible{opacity:1;visibility:visible;transform:translateY(0)}
-.scroll-top:hover{background:#1a3d0a;transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.25)}
-@media(max-width:640px){.scroll-top{bottom:18px;right:18px;width:42px;height:42px;font-size:14px}}
-</style>
 <script>
 (function(){
-  const btn=document.getElementById('scrollTop');
-  if(!btn)return;
-  if(getComputedStyle(document.body).overflow==='hidden'){btn.style.display='none';return;}
-  const onScroll=()=>{(window.scrollY||document.documentElement.scrollTop)>320?btn.classList.add('visible'):btn.classList.remove('visible');};
-  window.addEventListener('scroll',onScroll,{passive:true});
-  btn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
-  onScroll();
+  // Arama
+  const search = document.getElementById('brSearch');
+  const grid   = document.getElementById('brGrid');
+  const empty  = document.getElementById('brEmpty');
+  const chips  = document.querySelectorAll('.city-chip');
+  let activeCity = '';
+
+  function applyFilter(){
+    if (!grid) return;
+    const q = (search?.value || '').toLowerCase().trim();
+    let visible = 0;
+    grid.querySelectorAll('.br-card').forEach(card => {
+      const matchesSearch = !q || card.dataset.search.includes(q);
+      const matchesCity   = !activeCity || card.dataset.city === activeCity;
+      const show = matchesSearch && matchesCity;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  search?.addEventListener('input', applyFilter);
+  chips.forEach(c => c.addEventListener('click', () => {
+    chips.forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    activeCity = c.dataset.city;
+    applyFilter();
+  }));
+
+  // Modal map preview - kart üzerine tıklayınca embed göster (opsiyonel; şu an kapalı, sadece "Yol Tarifi" butonu yeni sekme açıyor)
+  // Esc ile modal kapat
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('brMapModal')?.classList.remove('show');
+    }
+  });
 })();
 </script>
-</body>
 
-</html>
+<?php require __DIR__ . '/includes/footer.php'; ?>
