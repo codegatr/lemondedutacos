@@ -104,7 +104,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="index.php">
+    <a class="brand" href="/index.php">
       <div class="logo-wrapper">
         <img class="brand-logo" src="/static/img/logos/LMD LOGOArtboard1.png" alt="TACOS Logo">
       </div>
@@ -112,23 +112,23 @@
     </a>
     <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat"><span></span></button>
     <nav class="nav" id="nav">
-      <a href="index.php">ANASAYFA</a>
-      <a href="kurumsal.php">KURUMSAL</a>
-      <a href="subeler.php">ŞUBELER</a>
-      <a href="kampanyalar.php">KAMPANYALAR</a>
-      <a href="franchise.php">FRANCHISE</a>
-      <a href="iletisim.php">İLETİŞİM</a>
+      <a href="/index.php">ANASAYFA</a>
+      <a href="/kurumsal.php">KURUMSAL</a>
+      <a href="/subeler.php">ŞUBELER</a>
+      <a href="/kampanyalar.php">KAMPANYALAR</a>
+      <a href="/franchise.php">FRANCHISE</a>
+      <a href="/iletisim.php">İLETİŞİM</a>
     </nav>
   </div>
 </header>
 
 <nav class="subnav">
   <div class="subnav-inner">
-    <a href="kurumsal.php"><i class="fa-solid fa-building"></i> Kurumsal</a>
-    <a class="active" href="tarihce.php"><i class="fa-solid fa-clock-rotate-left"></i> Tarihçe</a>
-    <a href="medya.php"><i class="fa-solid fa-photo-film"></i> Medya</a>
-    <a href="uretim.php"><i class="fa-solid fa-industry"></i> Üretim</a>
-    <a href="insan-kaynaklari.php"><i class="fa-solid fa-users"></i> İnsan Kaynakları</a>
+    <a href="/kurumsal.php"><i class="fa-solid fa-building"></i> Kurumsal</a>
+    <a class="active" href="/tarihce.php"><i class="fa-solid fa-clock-rotate-left"></i> Tarihçe</a>
+    <a href="/medya.php"><i class="fa-solid fa-photo-film"></i> Medya</a>
+    <a href="/uretim.php"><i class="fa-solid fa-industry"></i> Üretim</a>
+    <a href="/insan-kaynaklari.php"><i class="fa-solid fa-users"></i> İnsan Kaynakları</a>
   </div>
 </nav>
 

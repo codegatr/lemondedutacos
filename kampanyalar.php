@@ -616,7 +616,7 @@ $campaigns = db()->query(
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="index.php">
+      <a class="brand" href="/index.php">
         <div class="logo-wrapper">
           <img class="brand-logo" src="/static/img/logos/LMD LOGOArtboard1.png" alt="TACOS Logo">
         </div>
@@ -630,12 +630,12 @@ $campaigns = db()->query(
       </button>
 
       <nav class="nav" id="nav">
-        <a href="index.php">ANASAYFA</a>
-        <a href="kurumsal.php">KURUMSAL</a>
-        <a href="subeler.php">ŞUBELER</a>
-        <a class="active" href="kampanyalar.php">KAMPANYALAR</a>
-        <a href="franchise.php">FRANCHISE</a>
-        <a href="iletisim.php">İLETİŞİM</a>
+        <a href="/index.php">ANASAYFA</a>
+        <a href="/kurumsal.php">KURUMSAL</a>
+        <a href="/subeler.php">ŞUBELER</a>
+        <a class="active" href="/kampanyalar.php">KAMPANYALAR</a>
+        <a href="/franchise.php">FRANCHISE</a>
+        <a href="/iletisim.php">İLETİŞİM</a>
       </nav>
     </div>
   </header>

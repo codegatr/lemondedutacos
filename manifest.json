@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "release_date": "2026-04-26",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,22 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.0.8",
+            "date": "2026-04-26",
+            "notes": [
+                "KRİTİK: Crud save() bug'ı düzeltildi",
+                "  Önceden: Görsel yüklemeden başlık değişikliği kaydedince mevcut görsel SİLİNİYORDU",
+                "  Şimdi:    Görsel yüklenmediyse mevcut değer korunur",
+                "  Bu admin/promo-cards, admin/branches, admin/campaigns, admin/menu, admin/jobs",
+                "  ve diğer tüm Crud-bazlı admin sayfalarında düzelir",
+                "Tüm nav linkleri ABSOLUTE yapıldı (/ ile başlayacak şekilde)",
+                "  Önceden: 404 sayfasına düştüğünde linkler kırık path'e göre çözülüyordu",
+                "  Örnek: /static/img/yeni/index.php gibi yanlış URL'ler oluşuyordu",
+                "  Şimdi:    /index.php her zaman site root'una gider",
+                "  14 PHP sayfasında nav, button ve dahili linkler güncellendi"
+            ]
+        },
         {
             "version": "1.0.7",
             "date": "2026-04-26",

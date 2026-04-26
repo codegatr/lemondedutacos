@@ -11,12 +11,12 @@ $extra_css   = $extra_css   ?? '';
 $site_logo   = setting('site_logo', '/static/img/logos/LMD LOGOArtboard1.png');
 
 $nav = [
-    ['home',       'index.php',       'ANASAYFA'],
-    ['kurumsal',   'kurumsal.php',    'KURUMSAL'],
-    ['subeler',    'subeler.php',     'ŞUBELER'],
-    ['kampanyalar','kampanyalar.php', 'KAMPANYALAR'],
-    ['franchise',  'franchise.php',   'FRANCHISE'],
-    ['iletisim',   'iletisim.php',    'İLETİŞİM'],
+    ['home',       '/index.php',       'ANASAYFA'],
+    ['kurumsal',   '/kurumsal.php',    'KURUMSAL'],
+    ['subeler',    '/subeler.php',     'ŞUBELER'],
+    ['kampanyalar','/kampanyalar.php', 'KAMPANYALAR'],
+    ['franchise',  '/franchise.php',   'FRANCHISE'],
+    ['iletisim',   '/iletisim.php',    'İLETİŞİM'],
 ];
 ?><!doctype html>
 <html lang="tr">
@@ -98,7 +98,7 @@ button{font:inherit}
 <body class="<?= e($body_class) ?>">
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="index.php">
+    <a class="brand" href="/index.php">
       <div class="logo-wrapper">
         <img class="brand-logo" src="<?= e(asset($site_logo)) ?>" alt="<?= e(setting('site_name', SITE_NAME)) ?>">
       </div>

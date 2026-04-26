@@ -135,7 +135,7 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="index.php">
+    <a class="brand" href="/index.php">
       <div class="logo-wrapper">
         <img class="brand-logo" src="/static/img/logos/LMD LOGOArtboard1.png" alt="TACOS Logo">
       </div>
@@ -143,23 +143,23 @@
     </a>
     <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat"><span></span></button>
     <nav class="nav" id="nav">
-      <a href="index.php">ANASAYFA</a>
-      <a class="active" href="kurumsal.php">KURUMSAL</a>
-      <a href="subeler.php">ŞUBELER</a>
-      <a href="kampanyalar.php">KAMPANYALAR</a>
-      <a href="franchise.php">FRANCHISE</a>
-      <a href="iletisim.php">İLETİŞİM</a>
+      <a href="/index.php">ANASAYFA</a>
+      <a class="active" href="/kurumsal.php">KURUMSAL</a>
+      <a href="/subeler.php">ŞUBELER</a>
+      <a href="/kampanyalar.php">KAMPANYALAR</a>
+      <a href="/franchise.php">FRANCHISE</a>
+      <a href="/iletisim.php">İLETİŞİM</a>
     </nav>
   </div>
 </header>
 
 <nav class="subnav">
   <div class="subnav-inner">
-    <a class="active" href="kurumsal.php"><i class="fa-solid fa-building"></i> Kurumsal</a>
-    <a href="tarihce.php"><i class="fa-solid fa-clock-rotate-left"></i> Tarihçe</a>
-    <a href="medya.php"><i class="fa-solid fa-photo-film"></i> Medya</a>
-    <a href="uretim.php"><i class="fa-solid fa-industry"></i> Üretim</a>
-    <a href="insan-kaynaklari.php"><i class="fa-solid fa-users"></i> İnsan Kaynakları</a>
+    <a class="active" href="/kurumsal.php"><i class="fa-solid fa-building"></i> Kurumsal</a>
+    <a href="/tarihce.php"><i class="fa-solid fa-clock-rotate-left"></i> Tarihçe</a>
+    <a href="/medya.php"><i class="fa-solid fa-photo-film"></i> Medya</a>
+    <a href="/uretim.php"><i class="fa-solid fa-industry"></i> Üretim</a>
+    <a href="/insan-kaynaklari.php"><i class="fa-solid fa-users"></i> İnsan Kaynakları</a>
   </div>
 </nav>
 
@@ -180,7 +180,7 @@
     <div class="section-eyebrow">Kurumsal Sayfalar</div>
     <div class="section-title">Her Şeyi Burada Keşfedin</div>
     <div class="corp-grid">
-      <a class="corp-card" href="tarihce.php">
+      <a class="corp-card" href="/tarihce.php">
         <div class="corp-card-img green">🏛️</div>
         <div class="corp-card-body">
           <h3>Tarihçe</h3>
@@ -188,7 +188,7 @@
           <span class="corp-card-link">Keşfet <i class="fa-solid fa-arrow-right"></i></span>
         </div>
       </a>
-      <a class="corp-card" href="medya.php">
+      <a class="corp-card" href="/medya.php">
         <div class="corp-card-img red">📸</div>
         <div class="corp-card-body">
           <h3>Medya</h3>
@@ -196,7 +196,7 @@
           <span class="corp-card-link">Keşfet <i class="fa-solid fa-arrow-right"></i></span>
         </div>
       </a>
-      <a class="corp-card" href="uretim.php">
+      <a class="corp-card" href="/uretim.php">
         <div class="corp-card-img olive">🏭</div>
         <div class="corp-card-body">
           <h3>Üretim</h3>
@@ -204,7 +204,7 @@
           <span class="corp-card-link">Keşfet <i class="fa-solid fa-arrow-right"></i></span>
         </div>
       </a>
-      <a class="corp-card" href="insan-kaynaklari.php">
+      <a class="corp-card" href="/insan-kaynaklari.php">
         <div class="corp-card-img dark">👥</div>
         <div class="corp-card-body">
           <h3>İnsan Kaynakları</h3>

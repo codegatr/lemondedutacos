@@ -39,8 +39,14 @@ class Crud
     private function save(): void
     {
         $id = (int)($_POST['id'] ?? 0);
+        $images = (array)($this->cfg['images'] ?? []);
         $data = [];
         foreach ($this->cfg['fields'] as $f => $meta) {
+            // Görsel alanları POST'ta gelmez (file input). Bu döngüde atla,
+            // aşağıda upload bloğunda işlenecek. Aksi halde mevcut görselin
+            // üzerine NULL yazılır ve veri kaybı olur.
+            if (in_array($f, $images, true)) continue;
+
             $val = $_POST[$f] ?? null;
             if (($meta['type'] ?? '') === 'bool') {
                 $data[$f] = $val ? 1 : 0;
@@ -60,8 +66,9 @@ class Crud
             }
         }
 
-        // Image uploads
-        foreach (($this->cfg['images'] ?? []) as $imgField) {
+        // Image uploads — sadece yeni dosya yüklendiğinde DB'yi güncelle.
+        // Yüklenmediyse mevcut değer korunur (UPDATE'te alan SET edilmez).
+        foreach ($images as $imgField) {
             if (!empty($_FILES[$imgField]['name'])) {
                 $url = upload_file($imgField, $this->cfg['image_dir'] ?? 'sayfa', ALLOWED_IMG);
                 if ($url) {
@@ -73,7 +80,11 @@ class Crud
                     }
                     $data[$imgField] = $url;
                 }
+            } elseif (!$id) {
+                // Yeni kayıt + dosya yok → DB'ye NULL yaz (varsayılan)
+                $data[$imgField] = null;
             }
+            // UPDATE + dosya yok → $data'ya alan eklenmez, mevcut değer korunur
         }
 
         if ($id) {
