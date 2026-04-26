@@ -46,7 +46,7 @@ const MAIL_NAME = 'Le Monde Du Tacos';
 const GITHUB_OWNER = 'codegatr';                // GitHub kullanıcı/organizasyon
 const GITHUB_REPO  = 'lemondedutacos';          // Depo adı
 const GITHUB_TOKEN = '';                        // Özel depo ise PAT (önerilen: boş bırakın, public release kullanın)
-const APP_VERSION  = '1.2.3';                   // manifest.json ile senkron
+const APP_VERSION  = '1.2.4';                   // manifest.json ile senkron
 const UPDATE_CHECK_TTL = 3600;                  // 1 saatte bir kontrol
 
 // ============== HATA AYIKLAMA ==============

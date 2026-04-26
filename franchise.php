@@ -235,7 +235,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       position:absolute;
       top:50%;
       left:50%;
-      transform: translate(-52%, -50%) rotate(2deg); /* hafif sola = sağ alt kurtulur */
+      /* Viewport yüksekliğine göre dinamik scale: dar yükseklikte form orantılı küçülür, yatay layout korunur */
+      --fw-scale: clamp(0.62, calc((100vh - 164px) / 800), 1);
+      transform: translate(-52%, -50%) rotate(2deg) scale(var(--fw-scale)); /* hafif sola = sağ alt kurtulur */
       z-index:5;
       width: min(1380px, 98%);
     }
@@ -428,28 +430,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* =========================
        MOBİL DÜZEN (en önemli kısım)
        ========================= */
-    /* ======= LAPTOP SHORT VIEWPORT (13-14" %100 zoom) ======= */
-    @media (min-width:861px) and (max-height:860px){
-      body{ overflow-y:auto !important; height:auto !important; }
-      .hero{
-        min-height:unset;
-        height:auto;
-        rotate:0deg;
-        scale:1;
-        width:100%;
-        margin-left:0;
-        padding:24px 16px 36px;
-      }
-      .hero::before{ display:none; }
-      .franchise-wrap{
-        position:relative;
-        top:auto; left:auto;
-        transform:none;
-        width:min(1380px, 96%);
-        margin:0 auto;
-      }
-    }
-
     @media (max-width: 860px){
       body{ overflow:auto; } /* mobilde sayfa kayabilir */
       .hamburger{ display:flex; }
