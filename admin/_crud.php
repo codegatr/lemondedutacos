@@ -94,28 +94,45 @@ class Crud
             // UPDATE + dosya yok → $data'ya alan eklenmez, mevcut değer korunur
         }
 
-        if ($id) {
-            $sets = [];
-            $vals = [];
-            foreach ($data as $k => $v) {
-                $sets[] = "$k = ?";
-                $vals[] = $v;
+        try {
+            if ($id) {
+                $sets = [];
+                $vals = [];
+                foreach ($data as $k => $v) {
+                    $sets[] = "$k = ?";
+                    $vals[] = $v;
+                }
+                $vals[] = $id;
+                $sql = "UPDATE " . $this->cfg['table'] . " SET " . implode(', ', $sets) . " WHERE id = ?";
+                db()->prepare($sql)->execute($vals);
+                log_activity($this->cfg['table'] . '_updated', null, "ID: $id");
+                flash_set('success', $this->cfg['label'] . ' güncellendi.');
+            } else {
+                $cols = implode(',', array_keys($data));
+                $place = implode(',', array_fill(0, count($data), '?'));
+                $sql = "INSERT INTO " . $this->cfg['table'] . " ($cols) VALUES ($place)";
+                db()->prepare($sql)->execute(array_values($data));
+                $newId = (int)db()->lastInsertId();
+                log_activity($this->cfg['table'] . '_created', null, "ID: $newId");
+                flash_set('success', $this->cfg['label'] . ' eklendi.');
             }
-            $vals[] = $id;
-            $sql = "UPDATE " . $this->cfg['table'] . " SET " . implode(', ', $sets) . " WHERE id = ?";
-            db()->prepare($sql)->execute($vals);
-            log_activity($this->cfg['table'] . '_updated', null, "ID: $id");
-            flash_set('success', $this->cfg['label'] . ' güncellendi.');
-        } else {
-            $cols = implode(',', array_keys($data));
-            $place = implode(',', array_fill(0, count($data), '?'));
-            $sql = "INSERT INTO " . $this->cfg['table'] . " ($cols) VALUES ($place)";
-            db()->prepare($sql)->execute(array_values($data));
-            $newId = (int)db()->lastInsertId();
-            log_activity($this->cfg['table'] . '_created', null, "ID: $newId");
-            flash_set('success', $this->cfg['label'] . ' eklendi.');
+            header('Location: ' . basename($_SERVER['PHP_SELF'])); exit;
+
+        } catch (Throwable $e) {
+            // DB hatası — net mesaj göster, edit sayfasına dön
+            $msg = $e->getMessage();
+            // MySQL "cannot be null" hatasını insan diline çevir
+            if (str_contains($msg, "cannot be null")) {
+                preg_match("/Column '([^']+)' cannot be null/", $msg, $m);
+                $col = $m[1] ?? 'bilinmeyen';
+                $msg = "'$col' alanı boş bırakılamaz. Lütfen bir görsel yükleyin veya schema'yı NULL'able yapın (Admin → Güncelleme → Migration'ları Çalıştır).";
+            } elseif (str_contains($msg, "Duplicate entry")) {
+                $msg = "Bu kayıt zaten mevcut (benzersizlik ihlali).";
+            }
+            flash_set('error', "Kayıt hatası: " . $msg);
+            log_activity('crud_error', null, $this->cfg['table'] . ': ' . $e->getMessage());
+            header('Location: ' . basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new')); exit;
         }
-        header('Location: ' . basename($_SERVER['PHP_SELF'])); exit;
     }
 
     private function delete(): void
