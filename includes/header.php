@@ -3,12 +3,22 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/functions.php';
 
-$page_slug   = $page_slug   ?? 'home';
-$page_title  = $page_title  ?? setting('site_name', SITE_NAME);
-$page_desc   = $page_desc   ?? setting('site_tagline', '');
-$body_class  = $body_class  ?? '';
-$extra_css   = $extra_css   ?? '';
-$site_logo   = setting('site_logo', '/static/img/logos/LMD LOGOArtboard1.png');
+$page_slug          = $page_slug          ?? 'home';
+$page_title         = $page_title         ?? setting('site_name', SITE_NAME);
+$page_desc          = $page_desc          ?? setting('site_tagline', '');
+$page_meta_title    = $page_meta_title    ?? null;   // Tam title override (sayfa içinde set edilebilir)
+$page_meta_desc     = $page_meta_desc     ?? null;   // Tam meta description override
+$body_class         = $body_class         ?? '';
+$extra_css          = $extra_css          ?? '';
+$site_logo          = setting('site_logo', '/static/img/logos/LMD LOGOArtboard1.png');
+$site_logo_alt      = setting('site_logo_alt', 'TACOS Logo');
+$site_name_display  = setting('site_name', SITE_NAME);
+
+// Final title: page_meta_title varsa onu kullan, yoksa "page_title – site_name"
+// (Anasayfada page_title=site_name olduğu için tekrar oluşmasın diye)
+$_final_title = $page_meta_title
+    ?: ($page_title === $site_name_display ? $site_name_display : ($page_title . ' – ' . $site_name_display));
+$_final_desc  = $page_meta_desc ?: $page_desc;
 
 $nav = [
     ['home',       '/index.php',       'ANASAYFA'],
@@ -23,9 +33,10 @@ $nav = [
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?= e($page_title) ?> – <?= e(setting('site_name', SITE_NAME)) ?></title>
-<?php if ($page_desc): ?>
-<meta name="description" content="<?= e($page_desc) ?>">
+<title><?= e($_final_title) ?></title>
+<?php if ($_final_desc): ?>
+<meta name="description" content="<?= e($_final_desc) ?>">
+<meta property="og:description" content="<?= e($_final_desc) ?>">
 <?php endif; ?>
 <link rel="icon" href="/favicon.ico">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -71,6 +82,7 @@ button{font:inherit}
 .social-nav a{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;text-decoration:none;background:#000;border-radius:8px;transition:.35s ease;overflow:hidden;font-size:18px}
 .model-2 a{font-size:20px;border-radius:10px}
 .model-2 a:hover{background:#fff;text-shadow:0px 0px #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5}
+.model-2 .tiktok{background:#000}.model-2 .tiktok:hover{color:#000}
 .model-2 .facebook{background:#3B579D}.model-2 .facebook:hover{color:#3B579D}
 .model-2 .instagram{background:#E1306C}.model-2 .instagram:hover{color:#E1306C}
 .model-2 .twitter{background:#111827}.model-2 .twitter:hover{color:#111827}
@@ -111,10 +123,10 @@ button{font:inherit}
   <div class="topbar-inner">
     <a class="brand" href="/index.php">
       <div class="logo-wrapper">
-        <img class="brand-logo" src="<?= e(asset($site_logo)) ?>" alt="<?= e(setting('site_name', SITE_NAME)) ?>">
+        <img class="brand-logo" src="<?= e(asset($site_logo)) ?>" alt="<?= e($site_logo_alt) ?>">
       </div>
       <div class="brand-text">
-        <div class="logo"><?= e(setting('site_name', SITE_NAME)) ?></div>
+        <div class="logo"><?= e($site_name_display) ?></div>
       </div>
     </a>
     <button class="hamburger" id="hamburger" aria-label="Menüyü aç/kapat"><span></span></button>

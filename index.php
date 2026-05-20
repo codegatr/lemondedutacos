@@ -23,9 +23,12 @@ foreach ($promo_rows as $p) {
     $promos_by_group[$p['group_id']][] = $p;
 }
 
-$page_slug  = 'home';
-$page_title = setting('site_name', SITE_NAME);
-$page_desc  = setting('site_tagline', '');
+$page_slug       = 'home';
+$page_title      = setting('site_name', SITE_NAME);
+$page_desc       = setting('site_tagline', '');
+// Anasayfa SEO: tam title ve description (settings'ten yönetilir)
+$page_meta_title = setting('site_meta_title', 'Le Monde Du Tacos – Orginal Fransız Tacos Lezzeti');
+$page_meta_desc  = setting('site_meta_description', 'Le Monde Du Tacos ile Fransa\'nın orijinal tacos lezzetini keşfet! Özel peynir sos ve eşsiz soslu tacos menüleri, hızlı paket servis ve online paket fiyatları ile hemen sipariş ver.');
 $extra_css  = "
 html,body{max-width:100%;overflow-x:hidden}
 body{overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;height:100vh;height:100dvh;min-height:0}

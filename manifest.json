@@ -1,13 +1,31 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.0",
-    "release_date": "2026-04-26",
+    "version": "1.4.1",
+    "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
         "owner": "codegatr",
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.1",
+            "date": "2026-05-20",
+            "notes": [
+                "Anasayfa SEO + sosyal medya: lemondedutacos.com ile birebir hizalama",
+                "  Title düzeltildi (eski: 'Le Monde Du Tacos – Le Monde Du Tacos' tekrarı; yeni: 'Le Monde Du Tacos – Orginal Fransız Tacos Lezzeti')",
+                "  Meta description: uzun Türkçe SEO metni (peynir sos, paket fiyatları...)",
+                "  og:description meta tag eklendi (sosyal paylaşımlar için)",
+                "  Logo alt metni: 'TACOS Logo' (eski: site_name kullanıyordu)",
+                "Footer sosyal medya: 5 ikon (TikTok + Facebook + Instagram + Twitter + YouTube)",
+                "  TikTok yeni eklendi (1. sıra); admin → Ayarlar → Sosyal Medya'da yönetilebilir",
+                "  Facebook default değeri gerçek URL ile güncellendi (facebook.com/lemondedutacoss/)",
+                "  Instagram default değerine son '/' eklendi (instagram.com/lemondedutacos__/)",
+                "Admin → Ayarlar: SEO kartı eklendi (Meta Başlık + Meta Açıklama + Logo Alt)",
+                "  Anasayfa SEO metinleri artık admin panelden yönetilebilir, hardcoded değil",
+                "Migration 005: site_meta_title, site_meta_description, site_logo_alt, social_tiktok ayarları + mevcut social_facebook/instagram default güncellemesi"
+            ]
+        },
         {
             "version": "1.4.0",
             "date": "2026-04-26",

@@ -7,9 +7,10 @@ admin_require();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_required();
     $fields = [
-        'site_name','site_tagline','site_logo',
+        'site_name','site_tagline','site_logo','site_logo_alt',
+        'site_meta_title','site_meta_description',
         'contact_email','contact_phone','contact_address','contact_hours',
-        'social_facebook','social_instagram','social_twitter','social_youtube',
+        'social_facebook','social_instagram','social_twitter','social_youtube','social_tiktok',
         'footer_copyright','kvkk_text','commercial_text','mail_to',
     ];
     foreach ($fields as $f) {
@@ -58,6 +59,24 @@ require __DIR__ . '/_header.php';
       <label>Logo Yükle (yeni)</label>
       <input type="file" name="logo_upload" accept="image/*">
     </div>
+    <div class="row">
+      <label>Logo Alt Metni (erişilebilirlik / SEO)</label>
+      <input type="text" name="site_logo_alt" value="<?= e(setting('site_logo_alt', 'TACOS Logo')) ?>" placeholder="TACOS Logo">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>SEO (Anasayfa)</h2>
+    <div class="row">
+      <label>Meta Başlık (Anasayfa &lt;title&gt;)</label>
+      <input type="text" name="site_meta_title" value="<?= e(setting('site_meta_title')) ?>" placeholder="Le Monde Du Tacos – Orginal Fransız Tacos Lezzeti">
+      <div class="help">Anasayfada tarayıcı sekmesinde ve Google sonuçlarında görünür. Boş bırakırsanız Site Adı kullanılır.</div>
+    </div>
+    <div class="row">
+      <label>Meta Açıklama (description &amp; og:description)</label>
+      <textarea name="site_meta_description" rows="3" placeholder="Le Monde Du Tacos ile Fransa'nın orijinal tacos lezzetini keşfet!..."><?= e(setting('site_meta_description')) ?></textarea>
+      <div class="help">Arama motoru sonuçlarında görünen açıklama. 150-160 karakter ideal.</div>
+    </div>
   </div>
 
   <div class="card">
@@ -89,11 +108,13 @@ require __DIR__ . '/_header.php';
   <div class="card">
     <h2>Sosyal Medya</h2>
     <div class="grid-2">
+      <div class="row"><label><i class="fa-brands fa-tiktok"></i> TikTok</label><input type="url" name="social_tiktok" value="<?= e(setting('social_tiktok')) ?>" placeholder="https://www.tiktok.com/@lemondedutacos"></div>
       <div class="row"><label><i class="fa-brands fa-facebook"></i> Facebook</label><input type="url" name="social_facebook" value="<?= e(setting('social_facebook')) ?>"></div>
       <div class="row"><label><i class="fa-brands fa-instagram"></i> Instagram</label><input type="url" name="social_instagram" value="<?= e(setting('social_instagram')) ?>"></div>
       <div class="row"><label><i class="fa-brands fa-x-twitter"></i> Twitter / X</label><input type="url" name="social_twitter" value="<?= e(setting('social_twitter')) ?>"></div>
       <div class="row"><label><i class="fa-brands fa-youtube"></i> YouTube</label><input type="url" name="social_youtube" value="<?= e(setting('social_youtube')) ?>"></div>
     </div>
+    <div class="help">Boş veya <code>#</code> bırakılan ikonlar tıklanabilir olmaz (link gitmez). Footer'da görünmeleri için gerçek URL girin.</div>
   </div>
 
   <div class="card">

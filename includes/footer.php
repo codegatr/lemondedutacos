@@ -2,8 +2,9 @@
   <ul class="social-nav model-2" aria-label="Sosyal medya">
     <?php
     $socials = [
-      ['facebook',  setting('social_facebook'),  'fa-facebook-f', 'Facebook'],
-      ['instagram', setting('social_instagram', 'https://www.instagram.com/lemondedutacos__'), 'fa-instagram', 'Instagram'],
+      ['tiktok',    setting('social_tiktok',    'https://www.tiktok.com/@lemondedutacos'),     'fa-tiktok',     'TikTok'],
+      ['facebook',  setting('social_facebook',  'https://www.facebook.com/lemondedutacoss/'),  'fa-facebook-f', 'Facebook'],
+      ['instagram', setting('social_instagram', 'https://www.instagram.com/lemondedutacos__/'), 'fa-instagram',  'Instagram'],
       ['twitter',   setting('social_twitter'),   'fa-x-twitter',  'Twitter/X'],
       ['youtube',   setting('social_youtube'),   'fa-youtube',    'YouTube'],
     ];
@@ -40,6 +41,7 @@
 .social-nav a{display:inline-block;width:36px;height:36px;line-height:36px;text-align:center;color:#fff;text-decoration:none;background:#000;border-radius:8px;transition:.35s ease;overflow:hidden;font-size:18px;}
 .model-2 a{font-size:20px;border-radius:10px;}
 .model-2 a:hover{background:#fff;text-shadow:0px 0px #d5d5d5,1px 1px #d5d5d5,2px 2px #d5d5d5,3px 3px #d5d5d5,4px 4px #d5d5d5;}
+.model-2 .tiktok{background:#000;}.model-2 .tiktok:hover{color:#000;}
 .model-2 .facebook{background:#3B579D;}.model-2 .facebook:hover{color:#3B579D;}
 .model-2 .instagram{background:#E1306C;}.model-2 .instagram:hover{color:#E1306C;}
 .model-2 .twitter{background:#111827;}.model-2 .twitter:hover{color:#111827;}
