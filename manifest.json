@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,19 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.2",
+            "date": "2026-05-20",
+            "notes": [
+                "Kampanyalar: 6 gerçek kampanya (anasayfa ile birebir)",
+                "  Eski: 3 placeholder (Kampanya 1/2/3 → /static/img/yeni/kampanya{1,2,3}.png)",
+                "  Yeni: 2li Efsane Menü, Algida Menü, Efsane İçecek Menü, Efsane Tatlı Menü, Extrem Menü, Kanka Menü",
+                "12 yeni kampanya görseli eklendi: static/img/kampanyalar/ (desktop + _mobil varyantları)",
+                "Migration 006: eski 3 placeholder kampanyayı sil, 6 gerçek kampanyayı seed et",
+                "  Sadece title='Kampanya 1/2/3' VE image='/static/img/yeni/kampanya*' olanları siler",
+                "  Kullanıcı elle eklediği kampanyalara dokunmaz"
+            ]
+        },
         {
             "version": "1.4.1",
             "date": "2026-05-20",

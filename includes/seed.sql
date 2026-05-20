@@ -135,9 +135,12 @@ INSERT IGNORE INTO slider (title, image, image_mobile, sort_order, is_active) VA
 ('Banner 2', '/static/img/yeni/banner2.png', '/static/img/yeni/banner2-mobile.png', 2, 1);
 
 INSERT IGNORE INTO campaigns (title, image, image_mobile, sort_order, is_active) VALUES
-('Kampanya 1', '/static/img/yeni/kampanya1.png', '/static/img/yeni/kampanya1-mobile.png', 1, 1),
-('Kampanya 2', '/static/img/yeni/kampanya2.png', '/static/img/yeni/kampanya2-mobile.png', 2, 1),
-('Kampanya 3', '/static/img/yeni/kampanya3.png', '/static/img/yeni/kampanya3-mobile.png', 3, 1);
+('2li Efsane Menü',     '/static/img/kampanyalar/2liefsanemenu.png',     '/static/img/kampanyalar/2liefsanemenu_mobil.png',     1, 1),
+('Algida Menü',         '/static/img/kampanyalar/algidamenu.png',        '/static/img/kampanyalar/algidamenu_mobil.png',        2, 1),
+('Efsane İçecek Menü',  '/static/img/kampanyalar/efsaneicecekmenu.png',  '/static/img/kampanyalar/efsaneicecekmenu_mobil.png',  3, 1),
+('Efsane Tatlı Menü',   '/static/img/kampanyalar/efsanetatli.png',       '/static/img/kampanyalar/efsanetatli_mobil.png',       4, 1),
+('Extrem Menü',         '/static/img/kampanyalar/extrem.png',            '/static/img/kampanyalar/extrem_mobil.png',            5, 1),
+('Kanka Menü',          '/static/img/kampanyalar/kankamenu.png',         '/static/img/kampanyalar/kankamenu_mobil.png',         6, 1);
 
 INSERT IGNORE INTO pages (slug, title, subtitle, body, is_active) VALUES
 ('kurumsal', 'LMD Tacos Kurumsal', NULL, NULL, 1),
