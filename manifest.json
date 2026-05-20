@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,19 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.6",
+            "date": "2026-05-20",
+            "notes": [
+                "KRİTİK FIX: kampanyalar.php slider dots hardcoded bug'ı",
+                "  Eski: HTML'de hardcoded 3 nokta (<span data-slide='0/1/2'>)",
+                "  Sorun: DB'de 6 kampanya olsa bile kullanıcı sadece 3 nokta görüyor + ilk 3 slide'a tıklayabiliyordu",
+                "  Auto-slide tüm 6 slide arasında dolaşıyordu ama dots güncellenmiyordu (slide 4-5-6'da hiç dot aktif değil)",
+                "  Bu yüzden Yunus 'sadece 3 görüyorum' diye bildirdi — slide gerçekten 6 ama dot 3'tü",
+                "  Çözüm: PHP foreach ile kampanya sayısı kadar dot üret",
+                "  Bonus: a11y iyileştirmesi — role='button', aria-label, tabindex=0 eklendi"
+            ]
+        },
         {
             "version": "1.4.5",
             "date": "2026-05-20",

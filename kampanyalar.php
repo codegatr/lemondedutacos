@@ -666,9 +666,13 @@ $campaigns = db()->query(
     </button>
 
     <div class="slider-dots" id="sliderDots" aria-label="Slider göstergeleri">
-      <span class="slider-dot active" data-slide="0"></span>
-      <span class="slider-dot" data-slide="1"></span>
-      <span class="slider-dot" data-slide="2"></span>
+      <?php
+        // Kampanya sayısı kadar nokta üret (boş ise 1 placeholder)
+        $dotCount = max(1, count($campaigns));
+        for ($i = 0; $i < $dotCount; $i++):
+      ?>
+        <span class="slider-dot<?= $i === 0 ? ' active' : '' ?>" data-slide="<?= $i ?>" role="button" aria-label="<?= ($i + 1) ?>. görsele git" tabindex="0"></span>
+      <?php endfor; ?>
     </div>
   </main>
 
