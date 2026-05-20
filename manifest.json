@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,27 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.3",
+            "date": "2026-05-20",
+            "notes": [
+                "KRİTİK FIX: Migration runner parser bug'ı düzeltildi",
+                "  Sebep: explode(';',$sql) sonrası bir parçanın başında yorum (--) varsa,",
+                "         filter 'str_starts_with(--)' o parçanın TÜM statement'ını da yorum sanıp atıyordu",
+                "  Sonuç: yorumlu migration'lar (004, 005, 006) sessizce skip ediliyordu",
+                "         _migrations tablosuna 'applied' olarak işaretleniyor ama hiçbir SQL çalışmıyordu",
+                "  Çözüm: preg_replace ile yorum SATIRLARI önce silinir, sonra explode edilir",
+                "  Düzeltilen iki dosya: includes/functions.php + admin/update.php",
+                "Migration 007: idempotent fix — 005 ve 006'nın yapamadığı işleri tek seferde tamamlar",
+                "  • settings: site_meta_title, site_meta_description, site_logo_alt, social_tiktok eklenir",
+                "  • settings.social_facebook='#' → 'facebook.com/lemondedutacoss/' (boş/'#' olanları günceller)",
+                "  • settings.social_instagram default değerine son '/' eklenir",
+                "  • campaigns: 3 placeholder silinir + 6 gerçek kampanya eklenir",
+                "  Hepsi idempotent — birden fazla kez çalıştırılırsa duplicate oluşmaz",
+                "  Yorumsuz yazıldı (her ihtimale karşı)",
+                "Eski 006 dosyası repo'da kalır ama _migrations'da zaten 'applied' işaretli — skip edilir"
+            ]
+        },
         {
             "version": "1.4.2",
             "date": "2026-05-20",

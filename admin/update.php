@@ -181,7 +181,11 @@ function upd_runMigrations(): array {
         foreach ($files as $mf) {
             if (isset($applied[$mf])) { $skip++; continue; }
             $sql = file_get_contents("$migDir/$mf");
-            $stmts = array_filter(array_map('trim', explode(';', $sql)), fn($s) => $s && !str_starts_with($s, '--'));
+            // FIX: Önce yorum satırlarını sil, sonra statement'lara böl.
+            // Eski bug: explode(';',$sql) sonrası başında yorum olan parçaları
+            // tüm statement'ı yorum sanıp atıyordu.
+            $sql = preg_replace('/^\s*--[^\r\n]*$/m', '', $sql);
+            $stmts = array_filter(array_map('trim', explode(';', $sql)), fn($s) => $s !== '');
             try {
                 foreach ($stmts as $s) if (trim($s)) $pdo->exec($s);
                 $pdo->prepare("INSERT INTO _migrations (name) VALUES (?)")->execute([$mf]);

@@ -343,8 +343,13 @@ function run_migrations(): array {
 
         // Yorum satırlarını temizle ve statement'lara böl
         // Basit splitting (; ile böl, ama transaction güvenli için)
-        $stmts = array_filter(array_map('trim', explode(';', $sql)), function ($s) {
-            return $s && !str_starts_with($s, '--');
+        // Önce yorum satırlarını ve boş satırları sil (regex ile satır bazlı)
+        // Eski bug: explode(';',$sql) sonrası başında '--' olan parçaları yorum sanıp atıyordu.
+        // Şu durum hatalıydı: SQL'in en üstündeki açıklama yorumları, ilk DELETE/INSERT'i
+        // de yorum içine alıyordu çünkü yorum + statement aynı parçada birleşiyordu.
+        $sql_clean = preg_replace('/^\s*--[^\r\n]*$/m', '', $sql);
+        $stmts = array_filter(array_map('trim', explode(';', $sql_clean)), function ($s) {
+            return $s !== '';
         });
 
         try {
