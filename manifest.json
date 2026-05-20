@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,20 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.5",
+            "date": "2026-05-20",
+            "notes": [
+                "medya.php — İletişim Bilgileri bloğu eklendi (anasayfa medya.html ile birebir)",
+                "  Önceki basit 'Medya İletişim: mailto:...' kutusu kaldırıldı",
+                "  Yeni: 'Le Monde Du Tacos Halkalı Merkez' başlıklı detaylı kart",
+                "  İçerik: Adres (Google Maps linkli) + Telefon (tel: linkli) + Sosyal Medya (TikTok+Facebook+Instagram)",
+                "  Veri kaynağı: settings tablosu (contact_address, contact_phone, social_tiktok/facebook/instagram)",
+                "  Default fallback: Halkalı Merkez, Posta Sk., 34303 Küçükçekmece/İstanbul + 0505 396 55 56",
+                "  Yeni CSS: contact-card, contact-row, contact-icon, contact-label, contact-value, contact-socials, contact-social-link",
+                "  Responsive: 600px altında flex-wrap + row layout korunur"
+            ]
+        },
         {
             "version": "1.4.4",
             "date": "2026-05-20",

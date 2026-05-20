@@ -63,6 +63,33 @@
     .press-card p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;}
     .press-link{font-family:'Retrim',sans-serif;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--brand);font-weight:700;display:inline-flex;align-items:center;gap:5px;}
 
+    /* İLETİŞİM BLOĞU */
+    .contact-block{margin-top:60px;}
+    .contact-card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.04);}
+    .contact-head{padding:32px;background:linear-gradient(135deg,#f9fbf6 0%,#f3f5f0 100%);border-bottom:1px solid #e5e7eb;}
+    .contact-head h3{font-family:Georgia,serif;font-style:italic;font-size:clamp(22px,3vw,30px);color:var(--ink);font-weight:700;}
+    .contact-list{padding:8px 32px;}
+    .contact-row{display:flex;gap:18px;align-items:center;padding:20px 0;border-bottom:1px solid #f0f0f0;}
+    .contact-row:last-child{border-bottom:none;}
+    .contact-icon{width:42px;height:42px;border-radius:50%;background:#f0f3eb;display:flex;align-items:center;justify-content:center;color:var(--brand);flex-shrink:0;font-size:16px;}
+    .contact-info{flex:1;min-width:0;}
+    .contact-label{font-family:'Retrim',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--brand2);margin-bottom:4px;}
+    .contact-value{font-weight:600;color:var(--ink);font-size:15px;line-height:1.5;word-break:break-word;}
+    .contact-value a{color:var(--ink);transition:color .2s;}
+    .contact-value a:hover{color:var(--brand);}
+    .contact-socials{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+    .contact-social-link{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #e5e7eb;border-radius:24px;font-size:13px;font-weight:600;color:var(--ink);transition:all .25s;background:#fff;}
+    .contact-social-link i{font-size:14px;}
+    .contact-social-link.tiktok i{color:#000;}
+    .contact-social-link.facebook i{color:#3B579D;}
+    .contact-social-link.instagram i{color:#E1306C;}
+    .contact-social-link.tiktok:hover{background:#000;color:#fff;border-color:#000;}
+    .contact-social-link.tiktok:hover i{color:#fff;}
+    .contact-social-link.facebook:hover{background:#3B579D;color:#fff;border-color:#3B579D;}
+    .contact-social-link.facebook:hover i{color:#fff;}
+    .contact-social-link.instagram:hover{background:#E1306C;color:#fff;border-color:#E1306C;}
+    .contact-social-link.instagram:hover i{color:#fff;}
+
     /* KİT */
 
     /* LIGHTBOX */
@@ -85,7 +112,12 @@
       .nav.open{display:flex;}.nav a{padding:12px;}
       .footer{flex-direction:column;text-align:center;gap:8px;padding:14px 10px;}
     }
-    @media(max-width:600px){}
+    @media(max-width:600px){
+      .contact-head{padding:24px 20px;}
+      .contact-list{padding:8px 20px;}
+      .contact-row{flex-wrap:wrap;}
+      .contact-info{flex:1 1 calc(100% - 60px);}
+    }
     @media(max-width:860px){
       .logo-wrapper{width:40px!important;height:40px!important;margin-left:30px!important;position:relative!important;flex:0 0 40px!important;}
       .brand-logo{position:absolute!important;height:90px!important;width:auto!important;left:50%!important;top:-16px!important;transform:translateX(-70%)!important;pointer-events:none!important;}
@@ -166,9 +198,61 @@
       </div>
     </div>
 
-      <div style="margin-top:40px;padding:24px;background:#f9fafb;border-radius:14px;border:1px solid #e5e7eb;">
-        <h3 style="font-family:Georgia,serif;font-style:italic;margin-bottom:8px;">Medya İletişim</h3>
-        <p style="font-size:14px;color:var(--muted);">Basın soruları ve röportaj talepleri için: <a href="mailto:medya@lemondedutacos.com" style="color:var(--brand);font-weight:700;">medya@lemondedutacos.com</a></p>
+      <div class="media-block contact-block">
+        <div class="section-eyebrow">İletişim Bilgileri</div>
+        <div class="contact-card">
+          <div class="contact-head">
+            <h3>Le Monde Du Tacos Halkalı Merkez</h3>
+          </div>
+          <div class="contact-list">
+
+            <div class="contact-row">
+              <div class="contact-icon"><i class="fa-solid fa-location-dot"></i></div>
+              <div class="contact-info">
+                <div class="contact-label">Adres</div>
+                <div class="contact-value">
+                  <a href="https://www.google.com/maps/search/?api=1&query=<?= e(rawurlencode(setting('contact_address', 'Halkalı Merkez, Posta Sk., 34303 Küçükçekmece/İstanbul'))) ?>" target="_blank" rel="noopener">
+                    <?= e(setting('contact_address', 'Halkalı Merkez, Posta Sk., 34303 Küçükçekmece/İstanbul')) ?>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="contact-row">
+              <div class="contact-icon"><i class="fa-solid fa-phone"></i></div>
+              <div class="contact-info">
+                <div class="contact-label">Telefon</div>
+                <div class="contact-value">
+                  <?php $phone = setting('contact_phone', '0505 396 55 56'); ?>
+                  <a href="tel:<?= e(preg_replace('/\s+/', '', $phone)) ?>"><?= e($phone) ?></a>
+                </div>
+              </div>
+            </div>
+
+            <div class="contact-row">
+              <div class="contact-icon"><i class="fa-solid fa-share-nodes"></i></div>
+              <div class="contact-info">
+                <div class="contact-label">Sosyal Medya</div>
+                <div class="contact-socials">
+                  <?php
+                    $sm = [
+                      ['tiktok',    setting('social_tiktok',    'https://www.tiktok.com/@lemondedutacos'),    'fa-tiktok',     'TikTok'],
+                      ['facebook',  setting('social_facebook',  'https://www.facebook.com/lemondedutacoss/'), 'fa-facebook-f', 'Facebook'],
+                      ['instagram', setting('social_instagram', 'https://www.instagram.com/lemondedutacos__/'), 'fa-instagram', 'Instagram'],
+                    ];
+                    foreach ($sm as [$cls, $url, $icon, $label]):
+                      if (!$url || $url === '#') continue;
+                  ?>
+                    <a class="contact-social-link <?= $cls ?>" href="<?= e($url) ?>" target="_blank" rel="noopener">
+                      <i class="fa-brands <?= $icon ?>"></i> <?= $label ?>
+                    </a>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
   </div>
