@@ -74,7 +74,7 @@ body{font-family:system-ui,Arial,sans-serif;background:linear-gradient(135deg,#3
     </div>
     <button type="submit" class="btn">GİRİŞ YAP</button>
   </form>
-  <div class="foot">v<?= APP_VERSION ?></div>
+  <div class="foot">v<?= e(app_version()) ?></div>
 </div>
 </body>
 </html>

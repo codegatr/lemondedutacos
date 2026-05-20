@@ -128,7 +128,7 @@ tr:hover td{background:#fafafa}
       <?php endforeach; ?>
     </nav>
     <div class="sb-foot">
-      v<?= APP_VERSION ?> &middot; <a href="logout.php">Çıkış</a>
+      v<?= e(app_version()) ?> &middot; <a href="logout.php">Çıkış</a>
     </div>
   </aside>
 

@@ -9,6 +9,22 @@ require_once __DIR__ . '/db.php';
 
 /* ================== ESC / SANITIZE ================== */
 
+/**
+ * Mevcut sürüm: version.txt'den okur (SSOT).
+ * config.php'deki APP_VERSION constant'ı statik kaldığı için (Smart Update
+ * config.php'yi atlar), gerçek sürüm bu fonksiyondan alınır.
+ */
+function app_version(): string {
+    static $cached = null;
+    if ($cached !== null) return $cached;
+    $f = __DIR__ . '/../version.txt';
+    if (is_file($f)) {
+        $v = trim((string)@file_get_contents($f));
+        if ($v !== '') return $cached = $v;
+    }
+    return $cached = (defined('APP_VERSION') ? APP_VERSION : '?');
+}
+
 function e(?string $s): string {
     return htmlspecialchars((string)($s ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
@@ -141,6 +157,13 @@ function admin_require(): void {
         $back = urlencode($_SERVER['REQUEST_URI'] ?? '/' . ADMIN_PATH . '/');
         header('Location: /' . ADMIN_PATH . '/login.php?back=' . $back);
         exit;
+    }
+    // Tarayıcı admin sayfalarını ÖNBELLEKLEMESİN — kaydet → redirect sonrası
+    // güncel içerik kesin gelsin. v1.4.4 ile eklendi (sayfa yenilenmiyor sorunu).
+    if (!headers_sent()) {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
     }
 }
 

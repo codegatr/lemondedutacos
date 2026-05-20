@@ -139,20 +139,7 @@ $branches_list = db()->query("SELECT title FROM branches WHERE is_active = 1 ORD
     .why-icon{width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:rgba(200,16,46,0.1);border-radius:12px;font-size:24px;margin-bottom:20px;}
     .why-card h3{font-size:17px;font-weight:700;color:var(--white);margin-bottom:10px;}
     .why-card p{font-size:14px;color:var(--gray);line-height:1.7;}
-
-    .positions-section{background:var(--bg-dark);}
-    .positions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;}
-    .position-card{background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:32px;display:flex;flex-direction:column;transition:all .35s;cursor:pointer;}
-    .position-card:hover{border-color:rgba(200,16,46,0.3);transform:translateY(-4px);box-shadow:0 12px 36px rgba(0,0,0,0.4);}
-    .position-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px;}
-    .position-header h3{font-size:18px;font-weight:700;color:var(--white);}
-    .position-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
-    .badge-fulltime{background:rgba(200,16,46,0.15);color:var(--red);border:1px solid rgba(200,16,46,0.3);}
-    .badge-parttime{background:rgba(245,197,24,0.1);color:var(--yellow);border:1px solid rgba(245,197,24,0.2);}
     .position-card p{font-size:14px;color:var(--gray);line-height:1.6;margin-bottom:20px;flex:1;}
-    .position-meta{display:flex;gap:16px;flex-wrap:wrap;}
-    .meta-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray-dark);}
-    .meta-item svg{width:14px;height:14px;stroke:var(--gray-dark);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 
     .process-section{background:var(--bg-darker);}
     .process-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;}
@@ -216,7 +203,6 @@ $branches_list = db()->query("SELECT title FROM branches WHERE is_active = 1 ORD
       .brand-logo{position:absolute!important;height:90px!important;width:auto!important;left:50%!important;top:-16px!important;transform:translateX(-70%)!important;pointer-events:none!important;}
     }
     @media(max-width:600px){
-      .positions-grid{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -297,126 +283,6 @@ $branches_list = db()->query("SELECT title FROM branches WHERE is_active = 1 ORD
         <h3>Rekabetçi Ücret</h3>
         <p>Sektör ortalamasının üzerinde maaş, prim sistemi ve çalışan yemek-içecek avantajları.</p>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- POZISYONLAR -->
-<section class="positions-section">
-  <div class="container">
-    <span class="section-label">Açık Pozisyonlar</span>
-    <h2 class="section-title">Ekibimize Katıl</h2>
-    <p class="section-desc">İstanbul ve Anadolu şubelerimizde çeşitli pozisyonlar sizi bekliyor.</p>
-    <div class="positions-grid">
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Şube Müdürü</h3>
-          <span class="position-badge badge-fulltime">Tam Zamanlı</span>
-        </div>
-        <p>Şube operasyonlarını yönetmek, ekip liderliği yapmak, satış hedeflerini gerçekleştirmek. 2+ yıl F&B yönetim deneyimi aranıyor.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            İstanbul / Kapadokya
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Tam Zamanlı
-          </div>
-        </div>
-      </div>
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Kasiyer / Müşteri Temsilcisi</h3>
-          <span class="position-badge badge-fulltime">Tam Zamanlı</span>
-        </div>
-        <p>Sipariş alma, ödeme işlemleri ve müşteri memnuniyetini ön planda tutarak pozitif satış deneyimi sunmak.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Tüm Şubeler
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Vardiyalı
-          </div>
-        </div>
-      </div>
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Mutfak Ekip Üyesi</h3>
-          <span class="position-badge badge-fulltime">Tam Zamanlı</span>
-        </div>
-        <p>Tacos, bun ve diğer ürünlerin standart reçeteler dahilinde hazırlanması. Hijyen kurallarına dikkat eden adaylar tercih edilir.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Tüm Şubeler
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Vardiyalı
-          </div>
-        </div>
-      </div>
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Kurye / Paketçi</h3>
-          <span class="position-badge badge-parttime">Yarı Zamanlı</span>
-        </div>
-        <p>Online siparişlerin zamanında ve düzgün teslimatı. Ehliyet sahibi (B veya A2 sınıfı) adaylar tercih edilir.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            İstanbul
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Yarı Zamanlı
-          </div>
-        </div>
-      </div>
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Sosyal Medya Uzmanı</h3>
-          <span class="position-badge badge-fulltime">Tam Zamanlı</span>
-        </div>
-        <p>Marka iletişimi, içerik üretimi, kampanya yönetimi ve sosyal medya stratejisi. Yaratıcı ve trendleri takip eden adaylar.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            İstanbul – Genel Merkez
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Tam Zamanlı
-          </div>
-        </div>
-      </div>
-
-      <div class="position-card animate-in">
-        <div class="position-header">
-          <h3>Stajyer (Çeşitli Departmanlar)</h3>
-          <span class="position-badge badge-parttime">Yarı Zamanlı</span>
-        </div>
-        <p>Üniversite öğrencileri için operasyon, pazarlama ve insan kaynakları departmanlarında staj fırsatları.</p>
-        <div class="position-meta">
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            İstanbul
-          </div>
-          <div class="meta-item">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Esnek Çalışma
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </section>

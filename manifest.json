@@ -1,6 +1,6 @@
 {
     "name": "Le Monde Du Tacos",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "release_date": "2026-05-20",
     "min_php": "8.1.0",
     "github": {
@@ -8,6 +8,25 @@
         "repo": "lemondedutacos"
     },
     "changelog": [
+        {
+            "version": "1.4.4",
+            "date": "2026-05-20",
+            "notes": [
+                "medya.php: anasayfa ile birebir hizalandı — Fotoğraf Galerisi ve Medya Kiti sekmeleri silindi",
+                "  Kalanlar: Basın Bültenleri (4 haber) + Medya İletişim kutusu",
+                "  Silinen: tab navigasyon, fotoğraf galerisi (9 görsel), medya kiti (4 indirme kartı), lightbox modal",
+                "  Toplam ~140 satır azaldı (kullanılmayan CSS ve JS dahil)",
+                "insan-kaynaklari.php: 'Açık Pozisyonlar' bölümü tamamen kaldırıldı",
+                "  Silinen: 6 pozisyon kartı (Şube Müdürü, Kasiyer, Mutfak, Kurye, Sosyal Medya, Stajyer)",
+                "  Form içindeki pozisyon dropdown'u korundu (anasayfada da var)",
+                "Admin: sayfa yenileme sorunu çözüldü",
+                "  admin_require() artık 'Cache-Control: no-store' header gönderiyor",
+                "  Save → redirect sonrası tarayıcı eski içerik göstermesin",
+                "Admin: sürüm rozeti dinamik — APP_VERSION constant'ı yerine version.txt'den okur",
+                "  Sebep: Smart Update config.php'yi atlar, APP_VERSION constant'ı eski kalır",
+                "  Yeni: app_version() helper — version.txt'i SSOT olarak kullanır"
+            ]
+        },
         {
             "version": "1.4.3",
             "date": "2026-05-20",
