@@ -20,6 +20,26 @@ class Crud
 {
     public function __construct(public readonly array $cfg) {}
 
+    private function redirect(string $url): void
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            header('Location: ' . $url, true, 303);
+        }
+
+        $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=' . $safeUrl . '">';
+        echo '<script>location.replace(' . json_encode($url, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');</script>';
+        echo '<a href="' . $safeUrl . '">Devam et</a>';
+        exit;
+    }
+
     public function handle(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -64,7 +84,7 @@ class Crud
             }
             if (!empty($meta['required']) && empty($data[$f])) {
                 flash_set('error', ($meta['label'] ?? $f) . ' alanı zorunludur.');
-                header('Location: ' . basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new')); exit;
+                $this->redirect(basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new'));
             }
         }
 
@@ -80,7 +100,7 @@ class Crud
                     // Mevcut error'a daha açıklayıcı bilgi de ekle
                     $existingFlash = $_SESSION['_flash']['error'] ?? '';
                     flash_set('error', 'Görsel yüklenemedi: ' . $existingFlash . ' — KAYIT YAPILMADI. Lütfen tekrar deneyin veya Sistem Diagnostik\'i kontrol edin.');
-                    header('Location: ' . basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new')); exit;
+                    $this->redirect(basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new'));
                 }
                 // Upload başarılı → eski dosyayı sil, yeni URL'i kaydet
                 if ($id) {
@@ -118,7 +138,7 @@ class Crud
                 log_activity($this->cfg['table'] . '_created', null, "ID: $newId");
                 flash_set('success', $this->cfg['label'] . ' eklendi.');
             }
-            header('Location: ' . basename($_SERVER['PHP_SELF'])); exit;
+            $this->redirect(basename($_SERVER['PHP_SELF']));
 
         } catch (Throwable $e) {
             // DB hatası — net mesaj göster, edit sayfasına dön
@@ -133,7 +153,7 @@ class Crud
             }
             flash_set('error', "Kayıt hatası: " . $msg);
             log_activity('crud_error', null, $this->cfg['table'] . ': ' . $e->getMessage());
-            header('Location: ' . basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new')); exit;
+            $this->redirect(basename($_SERVER['PHP_SELF']) . ($id ? '?action=edit&id=' . $id : '?action=new'));
         }
     }
 
@@ -151,7 +171,7 @@ class Crud
             log_activity($this->cfg['table'] . '_deleted', null, "ID: $id");
             flash_set('success', $this->cfg['label'] . ' silindi.');
         }
-        header('Location: ' . basename($_SERVER['PHP_SELF'])); exit;
+        $this->redirect(basename($_SERVER['PHP_SELF']));
     }
 
     private function toggle(): void
@@ -161,7 +181,7 @@ class Crud
             db()->prepare("UPDATE " . $this->cfg['table'] . " SET is_active = 1 - is_active WHERE id = ?")->execute([$id]);
             log_activity($this->cfg['table'] . '_toggled', null, "ID: $id");
         }
-        header('Location: ' . basename($_SERVER['PHP_SELF'])); exit;
+        $this->redirect(basename($_SERVER['PHP_SELF']));
     }
 
     private function sort(): void
