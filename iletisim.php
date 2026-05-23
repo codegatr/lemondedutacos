@@ -39,15 +39,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $branch ?: null, $subject, $msg, $rating, client_ip()
         ]);
 
-        $to = setting('mail_to', defined('MAIL_TO') ? MAIL_TO : '');
+        $branchTitle = '';
+        if ($branch) {
+            $branchStmt = db()->prepare("SELECT title FROM branches WHERE id = ?");
+            $branchStmt->execute([$branch]);
+            $branchTitle = (string)($branchStmt->fetchColumn() ?: '');
+        }
+
+        $to = form_notification_email();
         if ($to) {
-            $body = "<h3>Yeni Ä°letiÅŸim MesajÄ±</h3>"
-                  . "<p><b>Ad Soyad:</b> " . e($first . ' ' . $last) . "</p>"
-                  . "<p><b>E-posta:</b> " . e($email) . "</p>"
-                  . "<p><b>Telefon:</b> " . e($phone) . "</p>"
-                  . "<p><b>Konu:</b> " . e($subject) . "</p>"
-                  . "<p><b>Mesaj:</b><br>" . nl2br_safe($msg) . "</p>";
-            send_mail($to, 'Ä°letiÅŸim Formu: ' . $subject, $body);
+            $body = "<h2>Yeni Ä°letiÅŸim Formu MesajÄ±</h2>"
+                  . form_mail_table([
+                      'Ad' => $first,
+                      'Soyad' => $last,
+                      'Ad Soyad' => trim($first . ' ' . $last),
+                      'E-posta' => $email,
+                      'Telefon' => $phone,
+                      'Åžube' => $branchTitle ?: ($branch ? 'ID: ' . $branch : ''),
+                      'Konu' => $subject,
+                      'Puan' => $rating ? $rating . ' / 5' : '',
+                      'Mesaj' => $msg,
+                      'IP' => client_ip(),
+                      'Tarih' => date('d.m.Y H:i'),
+                  ]);
+            if (!send_mail($to, 'Ä°letiÅŸim Formu: ' . $subject, $body, $email)) {
+                log_activity('mail_failed', null, 'Ä°letiÅŸim formu bildirimi gÃ¶nderilemedi: ' . $to);
+            }
         }
 
         flash_set('success', 'MesajÄ±nÄ±z iletildi. En kÄ±sa sÃ¼rede dÃ¶nÃ¼ÅŸ yapacaÄŸÄ±z.');
@@ -162,254 +179,4 @@ $extra_css  = "
 }
 .d-value{ font-size:14px; color:#1f2937; line-height:1.5; }
 .d-value a{ color:#3a5f0b; font-weight:600; }
-.d-value a:hover{ text-decoration:underline; }
-
-/* SaÄŸ panel - Form */
-.form-card{ padding:28px 26px; }
-.form-card h2{
-  font-family:Georgia,serif;
-  font-size:24px;
-  color:#1f2937;
-  margin-bottom:6px;
-}
-.form-card .form-sub{
-  color:#6b7280;
-  font-size:13px;
-  margin-bottom:22px;
-}
-
-.form-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px 16px;
-}
-.form-grid .full{ grid-column:1 / -1; }
-@media(max-width:560px){
-  .form-grid{ grid-template-columns:1fr; }
-}
-
-.field label{
-  display:block;
-  font-size:11px;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.5px;
-  color:#6b7280;
-  margin-bottom:6px;
-}
-.field input[type=text],
-.field input[type=email],
-.field input[type=tel],
-.field select,
-.field textarea{
-  width:100%;
-  padding:11px 14px;
-  border:1px solid #d1d5db;
-  border-radius:8px;
-  font-size:14px;
-  font-family:inherit;
-  background:#fff;
-  color:#1f2937;
-  transition:border-color .15s, box-shadow .15s;
-}
-.field input:focus,
-.field select:focus,
-.field textarea:focus{
-  outline:none;
-  border-color:#3a5f0b;
-  box-shadow:0 0 0 3px rgba(58,95,11,.12);
-}
-.field textarea{ resize:vertical; min-height:120px; }
-
-/* YÄ±ldÄ±z puanlama */
-.rate{
-  display:inline-flex;
-  flex-direction:row-reverse;
-  gap:4px;
-  margin-top:4px;
-}
-.rate input{ display:none; }
-.rate label{
-  font-size:24px;
-  color:#d1d5db;
-  cursor:pointer;
-  transition:color .15s;
-  margin:0;
-}
-.rate input:checked ~ label,
-.rate label:hover,
-.rate label:hover ~ label{ color:#f59e0b; }
-
-/* Submit butonu */
-.btn-submit{
-  margin-top:18px;
-  width:100%;
-  padding:14px 20px;
-  background:linear-gradient(90deg,#3a5f0b,#16a34a);
-  color:#fff;
-  border:none;
-  border-radius:10px;
-  font-size:14px;
-  font-weight:700;
-  letter-spacing:.5px;
-  text-transform:uppercase;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  cursor:pointer;
-  transition:transform .12s, box-shadow .15s;
-}
-.btn-submit:hover{
-  transform:translateY(-2px);
-  box-shadow:0 8px 22px rgba(58,95,11,.3);
-}
-.btn-submit i{ font-size:13px; }
-
-/* Flash mesajlarÄ± */
-.flash{
-  padding:12px 16px;
-  border-radius:8px;
-  font-size:13px;
-  font-weight:600;
-  margin-bottom:16px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.flash.success{ background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
-.flash.error{ background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
-";
-require __DIR__ . '/includes/header.php';
-?>
-
-<main role="main">
-
-  <!-- Sayfa banner'Ä± -->
-  <section class="page-banner">
-    <div class="pb-inner">
-      <span class="tag"><i class="fa-solid fa-envelope" style="margin-right:6px"></i>Ä°LETÄ°ÅžÄ°M</span>
-      <h1>Bize UlaÅŸÄ±n</h1>
-      <p>SorularÄ±nÄ±z, Ã¶nerileriniz veya ÅŸikayetleriniz iÃ§in aÅŸaÄŸÄ±daki formu doldurun â€” en kÄ±sa sÃ¼rede geri dÃ¶nÃ¼ÅŸ yapacaÄŸÄ±z.</p>
-    </div>
-  </section>
-
-  <!-- Ä°letiÅŸim alanÄ±: 2 sÃ¼tun (sol bilgi + saÄŸ form) -->
-  <section class="contact-section" id="form">
-
-    <!-- SOL: Bilgi paneli -->
-    <aside class="info-card">
-      <div class="info-head">
-        <h2>Ä°letiÅŸim Bilgileri</h2>
-        <p>AÅŸaÄŸÄ±daki kanallardan bize her zaman ulaÅŸabilirsiniz.</p>
-      </div>
-      <div class="detail-list">
-        <?php
-          $contactPhone   = setting('contact_phone', '+90 212 444 12 34');
-          $contactEmail   = setting('contact_email', 'info@lemondedutacos.com');
-          $contactHours   = setting('contact_hours', 'Her GÃ¼n 10:00 â€“ 23:00');
-          $contactAddress = setting('contact_address', 'BahÃ§elievler, Adnan Kahveci Blv. No:101/B 34180 Ä°stanbul');
-          $phoneTel = preg_replace('/[^0-9+]/', '', $contactPhone);
-        ?>
-        <div class="detail-item">
-          <div class="d-icon"><i class="fa-solid fa-phone"></i></div>
-          <div class="d-content">
-            <div class="d-label">Telefon</div>
-            <div class="d-value"><a href="tel:<?= e($phoneTel) ?>"><?= e($contactPhone) ?></a></div>
-          </div>
-        </div>
-        <div class="detail-item">
-          <div class="d-icon"><i class="fa-solid fa-envelope"></i></div>
-          <div class="d-content">
-            <div class="d-label">E-posta</div>
-            <div class="d-value"><a href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a></div>
-          </div>
-        </div>
-        <div class="detail-item">
-          <div class="d-icon"><i class="fa-solid fa-clock"></i></div>
-          <div class="d-content">
-            <div class="d-label">Ã‡alÄ±ÅŸma Saatleri</div>
-            <div class="d-value"><?= e($contactHours) ?></div>
-          </div>
-        </div>
-        <div class="detail-item">
-          <div class="d-icon"><i class="fa-solid fa-location-dot"></i></div>
-          <div class="d-content">
-            <div class="d-label">Genel Merkez</div>
-            <div class="d-value"><?= nl2br_safe($contactAddress) ?></div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- SAÄž: Form -->
-    <div class="form-card">
-      <h2>Mesaj GÃ¶nderin</h2>
-      <div class="form-sub">24 saat iÃ§inde yanÄ±tlanacak â€” bilgileriniz gizli tutulmaktadÄ±r.</div>
-
-      <?php foreach (flash_get() as $f): ?>
-        <div class="flash <?= e($f['type']) ?>">
-          <i class="fa-solid <?= $f['type']==='success' ? 'fa-circle-check' : 'fa-circle-exclamation' ?>"></i>
-          <?= e($f['msg']) ?>
-        </div>
-      <?php endforeach; ?>
-
-      <form id="contactForm" method="post" action="iletisim.php#form" novalidate>
-        <?= csrf_field() ?>
-
-        <div class="form-grid">
-          <div class="field">
-            <label for="fname">Ad</label>
-            <input type="text" id="fname" name="fname" placeholder="AdÄ±nÄ±z" required>
-          </div>
-          <div class="field">
-            <label for="lname">Soyad</label>
-            <input type="text" id="lname" name="lname" placeholder="SoyadÄ±nÄ±z" required>
-          </div>
-          <div class="field">
-            <label for="email">E-posta</label>
-            <input type="email" id="email" name="email" placeholder="ornek@eposta.com" required>
-          </div>
-          <div class="field">
-            <label for="phone">Telefon</label>
-            <input type="tel" id="phone" name="phone" placeholder="+90 5XX XXX XX XX">
-          </div>
-          <div class="field full">
-            <label for="branch">Åžube</label>
-            <select id="branch" name="branch">
-              <option value="">â€” Åžube seÃ§in (opsiyonel) â€”</option>
-              <?php foreach ($branches as $b): ?>
-                <option value="<?= (int)$b['id'] ?>"><?= e($b['title']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="field full">
-            <label for="subject">Konu</label>
-            <input type="text" id="subject" name="subject" placeholder="MesajÄ±nÄ±zÄ±n konusu" required>
-          </div>
-          <div class="field full">
-            <label for="msg">MesajÄ±nÄ±z</label>
-            <textarea id="msg" name="msg" rows="5" placeholder="GÃ¶rÃ¼ÅŸ, Ã¶neri veya ÅŸikayetinizi buraya yazÄ±nâ€¦" required></textarea>
-          </div>
-          <div class="field full">
-            <label>Genel Deneyiminizi DeÄŸerlendirin</label>
-            <div class="rate">
-              <input type="radio" name="rating" id="s5" value="5"><label for="s5" title="MÃ¼kemmel">â˜…</label>
-              <input type="radio" name="rating" id="s4" value="4"><label for="s4" title="Ä°yi">â˜…</label>
-              <input type="radio" name="rating" id="s3" value="3"><label for="s3" title="Orta">â˜…</label>
-              <input type="radio" name="rating" id="s2" value="2"><label for="s2" title="KÃ¶tÃ¼">â˜…</label>
-              <input type="radio" name="rating" id="s1" value="1"><label for="s1" title="Ã‡ok kÃ¶tÃ¼">â˜…</label>
-            </div>
-          </div>
-        </div>
-
-        <button type="submit" class="btn-submit">
-          <i class="fa-solid fa-paper-plane"></i> GÃ¶nder
-        </button>
-      </form>
-    </div>
-
-  </section>
-</main>
-
-<?php require __DIR__ . '/includes/footer.php'; ?>
+.d-value a:hoveryìÑ•áÐµ‘•½É…Ñ¥½¸éÕ¹‘•É±¥¹”ìô((¼¨M‡|Á…¹•°€´½É´€¨¼(¹™½É´µ…É‘ìÁ…‘‘¥¹œèÈáÁà€ÈÙÁàìô(¹™½É´µ…É Éì(€™½¹Ðµ™…µ¥±äé•½É¥„±Í•É¥˜ì(€™½¹ÐµÍ¥é”èÈÑÁàì(€½±½ÈèŒÅ˜ÈäÌÜì(€µ…É¥¸µ‰½ÑÑ½´èÙÁàì)ô(¹™½É´µ…É€¹™½É´µÍÕ‰ì(€½±½ÈèŒÙˆÜÈàÀì(€™½¹ÐµÍ¥é”èÄÍÁàì(€µ…É¥¸µ‰½ÑÑ½´èÈÉÁàì)ô((¹™½É´µÉ¥‘ì(€‘¥ÍÁ±…äéÉ¥ì(€É¥µÑ•µÁ±…Ñ”µ½±Õµ¹ÌèÅ™È€Å™Èì(€…ÀèÄÑÁà€ÄÙÁàì)ô(¹™½É´µÉ¥€¹™Õ±±ìÉ¥µ½±Õµ¸èÄ€¼€´Äìô)µ•‘¥„¡µ…àµÝ¥‘Ñ èÔØÁÁà¥ì(€€¹™½É´µÉ¥‘ìÉ¥µÑ•µÁ±…Ñ”µ½±Õµ¹ÌèÅ™Èìô)ô((¹™¥•±±…‰•±ì(€‘¥ÍÁ±…äé‰±½¬ì(€™½¹ÐµÍ¥é”èÄÅÁàì(€™½¹ÐµÝ•¥¡ÐèÜÀÀì(€Ñ•áÐµÑÉ…¹Í™½É´éÕÁÁ•É…Í”ì(€±•ÑÑ•ÈµÍÁ…¥¹œè¸ÕÁàì(€½±½ÈèŒÙˆÜÈàÀì(€µ…É¥¸µ‰½ÑÑ½´èÙÁàì)ô(¹™¥•±¥¹ÁÕÑmÑåÁ”õÑ•áÑt°(¹™¥•±¥¹ÁÕÑmÑåÁ”õ•µ…¥±t°(¹™¥•±¥¹ÁÕÑmÑåÁ”õÑ•±t°(¹™¥•±Í•±•Ð°(¹™¥•±Ñ•áÑ…É•…ì(€Ý¥‘Ñ èÄÀÀ”ì(€Á…‘‘¥¹œèÄÅÁà€ÄÑÁàì(€‰½É‘•ÈèÅÁàÍ½±¥€ÅÕ‘ˆì(€‰½É‘•ÈµÉ…‘¥ÕÌèáÁàì(€™½¹ÐµÍ¥é”èÄÑÁàì(€™½¹Ðµ™…µ¥±äé¥¹¡•É¥Ðì(€‰…­É½Õ¹è™™˜ì(€½±½ÈèŒÅ˜ÈäÌÜì(€ÑÉ…¹Í¥Ñ¥½¸é‰½É‘•Èµ½±½È€¸ÄÕÌ°‰½àµÍ¡…‘½Ü€¸ÄÕÌì)ô(¹™¥•±¥¹ÁÕÐé™½ÕÌ°(¹™¥•±Í•±•Ðé™½ÕÌ°(¹™¥•±Ñ•áÑ…É•„é™½ÕÍì(€½ÕÑ±¥¹”é¹½¹”ì(€‰½É‘•Èµ½±½ÈèŒÍ„Õ˜Áˆì(€‰½àµÍ¡…‘½ÜèÀ€À€À€ÍÁàÉ‰„ Ôà°äÔ°ÄÄ°¸ÄÈ¤ì)ô(¹™¥•±Ñ•áÑ…É•…ìÉ•Í¥é”éÙ•ÉÑ¥…°ìµ¥¸µ¡•¥¡ÐèÄÈÁÁàìô((¼¨gÅ±“ÅèÁÕ…¹±…µ„€¨¼(¹É…Ñ•ì(€‘¥ÍÁ±…äé¥¹±¥¹”µ™±•àì(€™±•àµ‘¥É•Ñ¥½¸éÉ½ÜµÉ•Ù•ÉÍ”ì(€…ÀèÑÁàì(€µ…É¥¸µÑ½ÀèÑÁàì)ô(¹É…Ñ”¥¹ÁÕÑì‘¥ÍÁ±…äé¹½¹”ìô(¹É…Ñ”±…‰•±ì(€™½¹ÐµÍ¥é”èÈÑÁàì(€½±½ÈèÅÕ‘ˆì(€ÕÉÍ½ÈéÁ½¥¹Ñ•Èì(€ÑÉ…¹Í¥Ñ¥½¸é½±½È€¸ÄÕÌì(€µ…É¥¸èÀì)ô(¹É…Ñ”¥¹ÁÕÐé¡•­•ø±…‰•°°(¹É…Ñ”±…‰•°é¡½Ù•È°(¹É…Ñ”±…‰•°é¡½Ù•Èø±…‰•±ì½±½Èè˜Ôå”Áˆìô((¼¨MÕ‰µ¥Ð‰ÕÑ½¹Ô€¨¼(¹‰Ñ¸µÍÕ‰µ¥Ñì(€µ…É¥¸µÑ½ÀèÄáÁàì(€Ý¥‘Ñ èÄÀÀ”ì(€Á…‘‘¥¹œèÄÑÁà€ÈÁÁàì(€‰…­É½Õ¹é±¥¹•…ÈµÉ…‘¥•¹Ð äÁ‘•œ°ŒÍ„Õ˜Áˆ°ŒÄÙ„ÌÑ„¤ì(€½±½Èè™™˜ì(€‰½É‘•Èé¹½¹”ì(€‰½É‘•ÈµÉ…‘¥ÕÌèÄÁÁàì(€™½¹ÐµÍ¥é”èÄÑÁàì(€™½¹ÐµÝ•¥¡ÐèÜÀÀì(€±•ÑÑ•ÈµÍÁ…¥¹œè¸ÕÁàì(€Ñ•áÐµÑÉ…¹Í™½É´éÕÁÁ•É…Í”ì(€‘¥ÍÁ±…äé¥¹±¥¹”µ™±•àì(€…±¥¸µ¥Ñ•µÌé•¹Ñ•Èì(€©ÕÍÑ¥™äµ½¹Ñ•¹Ðé•¹Ñ•Èì(€…ÀèáÁàì(€ÕÉÍ½ÈéÁ½¥¹Ñ•Èì(€ÑÉ…¹Í¥Ñ¥½¸éÑÉ…¹Í™½É´€¸ÄÉÌ°‰½àµÍ¡…‘½Ü€¸ÄÕÌì)ô(¹‰Ñ¸µÍÕ‰µ¥Ðé¡½Ù•Éì(€ÑÉ…¹Í™½É´éÑÉ…¹Í±…Ñ•d ´ÉÁà¤ì(€‰½àµÍ¡…‘½ÜèÀ€áÁà€ÈÉÁàÉ‰„ Ôà°äÔ°ÄÄ°¸Ì¤ì)ô(¹‰Ñ¸µÍÕ‰µ¥Ð¥ì™½¹ÐµÍ¥é”èÄÍÁàìô((¼¨±…Í µ•Í…©±…ËÄ€¨¼(¹™±…Í¡ì(€Á…‘‘¥¹œèÄÉÁà€ÄÙÁàì(€‰½É‘•ÈµÉ…‘¥ÕÌèáÁàì(€™½¹ÐµÍ¥é”èÄÍÁàì(€™½¹ÐµÝ•¥¡ÐèØÀÀì(€µ…É¥¸µ‰½ÑÑ½´èÄÙÁàì(€‘¥ÍÁ±…äé™±•àì(€…±¥¸µ¥Ñ•µÌé•¹Ñ•Èì(€…ÀèáÁàì)ô(¹™±…Í ¹ÍÕ•ÍÍì‰…­É½Õ¹èÅ™…”Ôì½±½ÈèŒÀØÕ˜ÐØì‰½É‘•ÈèÅÁàÍ½±¥€„Ý˜ÍÀìô(¹™±…Í ¹•ÉÉ½Éì‰…­É½Õ¹è™•”É”Èì½±½ÈèŒääÅˆÅˆì‰½É‘•ÈèÅÁàÍ½±¥€™•…„ìô(ˆì)É•ÅÕ¥É”}}%I}|€¸€œ½¥¹±Õ‘•Ì½¡•…‘•È¹Á¡Àœì(üø((ñµ…¥¸É½±”ô‰µ…¥¸ˆø((€€ð„´´M…å™„‰…¹¹•ÈŸÄ€´´ø(€€ñÍ•Ñ¥½¸±…ÍÌô‰Á…”µ‰…¹¹•Èˆø(€€€€ñ‘¥Ø±…ÍÌô‰Áˆµ¥¹¹•Èˆø(€€€€€€ñÍÁ…¸±…ÍÌô‰Ñ…œˆøñ¤±…ÍÌô‰™„µÍ½±¥™„µ•¹Ù•±½Á”ˆÍÑå±”ô‰µ…É¥¸µÉ¥¡ÐèÙÁàˆøð½¤ûÁ1SÃ{Á4ð½ÍÁ…¸ø(€€€€€€ñ Äù	¥é”U±‡Å¸ð½ Äø(€€€€€€ñÀùM½ÉÕ±…ËÅ»Åè°ƒÙ¹•É¥±•É¥¹¥èÙ•å„ƒ}¥­…å•Ñ±•É¥¹¥è§¥¸‡}‡Å‘…­¤™½ÉµÔ‘½±‘ÕÉÕ¸ƒŠP•¸¯ÅÍ„ÏñÉ•‘”•É¤“Ù»ó|å…Á…‡Åè¸ð½Àø(€€€€ð½‘¥Øø(€€ð½Í•Ñ¥½¸ø((€€ð„´´ƒÁ±•Ñ§}¥´…±…»Äè€ÈÏñÑÕ¸€¡Í½°‰¥±¤€¬Í‡|™½É´¤€´´ø(€€ñÍ•Ñ¥½¸±…ÍÌô‰½¹Ñ…ÐµÍ•Ñ¥½¸ˆ¥ô‰™½É´ˆø((€€€€ð„´´M=0è	¥±¤Á…¹•±¤€´´ø(€€€€ñ…Í¥‘”±…ÍÌô‰¥¹™¼µ…Éˆø(€€€€€€ñ‘¥Ø±…ÍÌô‰¥¹™¼µ¡•…ˆø(€€€€€€€€ñ ÈûÁ±•Ñ§}¥´	¥±¥±•É¤ð½ Èø(€€€€€€€€ñÀù}‡Å‘…­¤­…¹…±±…É‘…¸‰¥é”¡•Èé…µ…¸Õ±‡}…‰¥±¥ÉÍ¥¹¥è¸ð½Àø(€€€€€€ð½‘¥Øø(€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ±¥ÍÐˆø(€€€€€€€€ðýÁ¡À(€€€€€€€€€€‘½¹Ñ…ÑA¡½¹”€€€ôÍ•ÑÑ¥¹œ ½¹Ñ…Ñ}Á¡½¹”œ°€œ¬äÀ€ÈÄÈ€ÐÐÐ€ÄÈ€ÌÐœ¤ì(€€€€€€€€€€‘½¹Ñ…Ñµ…¥°€€€ôÍ•ÑÑ¥¹œ ½¹Ñ…Ñ}•µ…¥°œ°€¥¹™½±•µ½¹‘•‘ÕÑ…½Ì¹½´œ¤ì(€€€€€€€€€€‘½¹Ñ…Ñ!½ÕÉÌ€€€ôÍ•ÑÑ¥¹œ ½¹Ñ…Ñ}¡½ÕÉÌœ°€!•Èñ¸€ÄÀèÀÀƒŠL€ÈÌèÀÀœ¤ì(€€€€€€€€€€‘½¹Ñ…Ñ‘‘É•ÍÌ€ôÍ•ÑÑ¥¹œ ½¹Ñ…Ñ}…‘‘É•ÍÌœ°€	…£•±¥•Ù±•È°‘¹…¸-…¡Ù•¤	±Ø¸9¼èÄÀÄ½€ÌÐÄàÀƒÁÍÑ…¹‰Õ°œ¤ì(€€€€€€€€€€‘Á¡½¹•Q•°€ôÁÉ•}É•Á±…” œ½mxÀ´ä­t¼œ°€œœ°€‘½¹Ñ…ÑA¡½¹”¤ì(€€€€€€€€üø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ¥Ñ•´ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ¥½¸ˆøñ¤±…ÍÌô‰™„µÍ½±¥™„µÁ¡½¹”ˆøð½¤øð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½¹Ñ•¹Ðˆø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ±…‰•°ˆùQ•±•™½¸ð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µÙ…±Õ”ˆøñ„¡É•˜ô‰Ñ•°èðüô” ‘Á¡½¹•Q•°¤€üøˆøðüô” ‘½¹Ñ…ÑA¡½¹”¤€üøð½„øð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ¥Ñ•´ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ¥½¸ˆøñ¤±…ÍÌô‰™„µÍ½±¥™„µ•¹Ù•±½Á”ˆøð½¤øð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½¹Ñ•¹Ðˆø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ±…‰•°ˆùµÁ½ÍÑ„ð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µÙ…±Õ”ˆøñ„¡É•˜ô‰µ…¥±Ñ¼èðüô” ‘½¹Ñ…Ñµ…¥°¤€üøˆøðüô” ‘½¹Ñ…Ñµ…¥°¤€üøð½„øð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ¥Ñ•´ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ¥½¸ˆøñ¤±…ÍÌô‰™„µÍ½±¥™„µ±½¬ˆøð½¤øð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½¹Ñ•¹Ðˆø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ±…‰•°ˆû…³Ç}µ„M……Ñ±•É¤ð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µÙ…±Õ”ˆøðüô” ‘½¹Ñ…Ñ!½ÕÉÌ¤€üøð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ¥Ñ•´ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ¥½¸ˆøñ¤±…ÍÌô‰™„µÍ½±¥™„µ±½…Ñ¥½¸µ‘½Ðˆøð½¤øð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½¹Ñ•¹Ðˆø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ±…‰•°ˆù•¹•°5•É­•èð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰µÙ…±Õ”ˆøðüô¹°É‰É}Í…™” ‘½¹Ñ…Ñ‘‘É•ÍÌ¤€üøð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø(€€€€€€ð½‘¥Øø(€€€€ð½…Í¥‘”ø((€€€€ð„´´Mxè½É´€´´ø(€€€€ñ‘¥Ø±…ÍÌô‰™½É´µ…Éˆø(€€€€€€ñ Èù5•Í…¨Ù¹‘•É¥¸ð½ Èø(€€€€€€ñ‘¥Ø±…ÍÌô‰™½É´µÍÕˆˆøÈÐÍ……Ð§¥¹‘”å…»ÅÑ±…¹……¬ƒŠP‰¥±¥±•É¥¹¥è¥é±¤ÑÕÑÕ±µ…­Ñ…“ÅÈ¸ð½‘¥Øø((€€€€€€ðýÁ¡À™½É•… €¡™±…Í¡}•Ð ¤…Ì€‘˜¤è€üø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰™±…Í €ðüô” ‘™lÑåÁ”t¤€üøˆø(€€€€€€€€€€ñ¤±…ÍÌô‰™„µÍ½±¥€ðüô€‘™lÑåÁ”tôôôÍÕ•ÍÌœ€ü€™„µ¥É±”µ¡•¬œ€è€™„µ¥É±”µ•á±…µ…Ñ¥½¸œ€üøˆøð½¤ø(€€€€€€€€€€ðüô” ‘™lµÍœt¤€üø(€€€€€€€€ð½‘¥Øø(€€€€€€ðýÁ¡À•¹‘™½É•… ì€üø((€€€€€€ñ™½É´¥ô‰½¹Ñ…Ñ½É´ˆµ•Ñ¡½ô‰Á½ÍÐˆ…Ñ¥½¸ô‰¥±•Ñ¥Í¥´¹Á¡À™½É´ˆ¹½Ù…±¥‘…Ñ”ø(€€€€€€€€ðüôÍÉ™}™¥•± ¤€üø((€€€€€€€€ñ‘¥Ø±…ÍÌô‰™½É´µÉ¥ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰™¹…µ”ˆùð½±…‰•°ø(€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰Ñ•áÐˆ¥ô‰™¹…µ”ˆ¹…µ”ô‰™¹…µ”ˆÁ±…•¡½±‘•Èô‰“Å»ÅèˆÉ•ÅÕ¥É•ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰±¹…µ”ˆùM½å…ð½±…‰•°ø(€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰Ñ•áÐˆ¥ô‰±¹…µ”ˆ¹…µ”ô‰±¹…µ”ˆÁ±…•¡½±‘•Èô‰M½å…“Å»ÅèˆÉ•ÅÕ¥É•ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰•µ…¥°ˆùµÁ½ÍÑ„ð½±…‰•°ø(€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰•µ…¥°ˆ¥ô‰•µ…¥°ˆ¹…µ”ô‰•µ…¥°ˆÁ±…•¡½±‘•Èô‰½É¹•­•Á½ÍÑ„¹½´ˆÉ•ÅÕ¥É•ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰Á¡½¹”ˆùQ•±•™½¸ð½±…‰•°ø(€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰Ñ•°ˆ¥ô‰Á¡½¹”ˆ¹…µ”ô‰Á¡½¹”ˆÁ±…•¡½±‘•Èôˆ¬äÀ€Õa`aa`a`a`ˆø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±™Õ±°ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰‰É…¹ ˆûyÕ‰”ð½±…‰•°ø(€€€€€€€€€€€€ñÍ•±•Ð¥ô‰‰É…¹ ˆ¹…µ”ô‰‰É…¹ ˆø(€€€€€€€€€€€€€€ñ½ÁÑ¥½¸Ù…±Õ”ôˆˆûŠPƒyÕ‰”Í—¥¸€¡½ÁÍ¥å½¹•°¤ƒŠPð½½ÁÑ¥½¸ø(€€€€€€€€€€€€€€ðýÁ¡À™½É•… € ‘‰É…¹¡•Ì…Ì€‘ˆ¤è€üø(€€€€€€€€€€€€€€€€ñ½ÁÑ¥½¸Ù…±Õ”ôˆðüô€¡¥¹Ð¤‘‰l¥t€üøˆøðüô” ‘‰lÑ¥Ñ±”t¤€üøð½½ÁÑ¥½¸ø(€€€€€€€€€€€€€€ðýÁ¡À•¹‘™½É•… ì€üø(€€€€€€€€€€€€ð½Í•±•Ðø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±™Õ±°ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰ÍÕ‰©•Ðˆù-½¹Ôð½±…‰•°ø(€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰Ñ•áÐˆ¥ô‰ÍÕ‰©•Ðˆ¹…µ”ô‰ÍÕ‰©•ÐˆÁ±…•¡½±‘•Èô‰5•Í…«Å»ÅëÅ¸­½¹ÕÍÔˆÉ•ÅÕ¥É•ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±™Õ±°ˆø(€€€€€€€€€€€€ñ±…‰•°™½Èô‰µÍœˆù5•Í…«Å»Åèð½±…‰•°ø(€€€€€€€€€€€€ñÑ•áÑ…É•„¥ô‰µÍœˆ¹…µ”ô‰µÍœˆÉ½ÝÌôˆÔˆÁ±…•¡½±‘•Èô‰ÙËó|°ƒÙ¹•É¤Ù•å„ƒ}¥­…å•Ñ¥¹¥é¤‰ÕÉ…å„å…ëÅ»Š˜ˆÉ•ÅÕ¥É•øð½Ñ•áÑ…É•„ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±™Õ±°ˆø(€€€€€€€€€€€€ñ±…‰•°ù•¹•°•¹•å¥µ¥¹¥é¤—}•É±•¹‘¥É¥¸ð½±…‰•°ø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰É…Ñ”ˆø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰É…‘¥¼ˆ¹…µ”ô‰É…Ñ¥¹œˆ¥ô‰ÌÔˆÙ…±Õ”ôˆÔˆøñ±…‰•°™½Èô‰ÌÔˆÑ¥Ñ±”ô‰7ñ­•µµ•°ˆûŠbð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰É…‘¥¼ˆ¹…µ”ô‰É…Ñ¥¹œˆ¥ô‰ÌÐˆÙ…±Õ”ôˆÐˆøñ±…‰•°™½Èô‰ÌÐˆÑ¥Ñ±”ô‹Áå¤ˆûŠbð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰É…‘¥¼ˆ¹…µ”ô‰É…Ñ¥¹œˆ¥ô‰ÌÌˆÙ…±Õ”ôˆÌˆøñ±…‰•°™½Èô‰ÌÌˆÑ¥Ñ±”ô‰=ÉÑ„ˆûŠbð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰É…‘¥¼ˆ¹…µ”ô‰É…Ñ¥¹œˆ¥ô‰ÌÈˆÙ…±Õ”ôˆÈˆøñ±…‰•°™½Èô‰ÌÈˆÑ¥Ñ±”ô‰/ÙÓðˆûŠbð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐÑåÁ”ô‰É…‘¥¼ˆ¹…µ”ô‰É…Ñ¥¹œˆ¥ô‰ÌÄˆÙ…±Õ”ôˆÄˆøñ±…‰•°™½Èô‰ÌÄˆÑ¥Ñ±”ô‹½¬¯ÙÓðˆûŠbð½±…‰•°ø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø((€€€€€€€€ñ‰ÕÑÑ½¸ÑåÁ”ô‰ÍÕ‰µ¥Ðˆ±…ÍÌô‰‰Ñ¸µÍÕ‰µ¥Ðˆø(€€€€€€€€€€ñ¤±…ÍÌô‰™„µÍ½±¥™„µÁ…Á•ÈµÁ±…¹”ˆøð½¤øÙ¹‘•È(€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€ð½™½É´ø(€€€€ð½‘¥Øø((€€ð½Í•Ñ¥½¸ø(ð½µ…¥¸ø((ðýÁ¡ÀÉ•ÅÕ¥É”}}%I}|€¸€œ½¥¹±Õ‘•Ì½™½½Ñ•È¹Á¡Àœì€üø(

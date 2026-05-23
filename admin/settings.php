@@ -10,6 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'site_name','site_tagline','site_logo','site_logo_alt',
         'site_meta_title','site_meta_description',
         'contact_email','contact_phone','contact_address','contact_hours',
+        'form_notification_email',
+        'franchise_title','franchise_description','franchise_info_title','franchise_info_text','franchise_info_text_2','franchise_contact_email',
         'social_facebook','social_instagram','social_twitter','social_youtube','social_tiktok',
         'footer_copyright','kvkk_text','commercial_text','mail_to',
     ];
@@ -96,6 +98,11 @@ require __DIR__ . '/_header.php';
       </div>
     </div>
     <div class="row">
+      <label>Form Bildirim E-postası</label>
+      <input type="email" name="form_notification_email" value="<?= e(setting('form_notification_email', setting('mail_to'))) ?>" placeholder="bildirim@ornek.com">
+      <div class="help">İletişim ve franchise formlarının kopyası bu adrese gönderilir. Boş bırakılırsa “Form mesajları” adresi kullanılır.</div>
+    </div>
+    <div class="row">
       <label>Çalışma Saatleri</label>
       <input type="text" name="contact_hours" value="<?= e(setting('contact_hours')) ?>" placeholder="Örn: Her Gün 10:00 – 23:00">
     </div>
@@ -115,6 +122,16 @@ require __DIR__ . '/_header.php';
       <div class="row"><label><i class="fa-brands fa-youtube"></i> YouTube</label><input type="url" name="social_youtube" value="<?= e(setting('social_youtube')) ?>"></div>
     </div>
     <div class="help">Boş veya <code>#</code> bırakılan ikonlar tıklanabilir olmaz (link gitmez). Footer'da görünmeleri için gerçek URL girin.</div>
+  </div>
+
+  <div class="card">
+    <h2>Franchise Sayfası</h2>
+    <div class="row"><label>Hero Başlık</label><input type="text" name="franchise_title" value="<?= e(setting('franchise_title', 'TACOS GIDA Ailesine Katılın')) ?>"></div>
+    <div class="row"><label>Hero Açıklama</label><textarea name="franchise_description" rows="2"><?= e(setting('franchise_description', 'Fast Food kültürünü ve sektörü en iyi bilen markanın desteğiyle kendi işinizin patronu olmak için harika bir fırsat!')) ?></textarea></div>
+    <div class="row"><label>Bilgi Paneli Başlık</label><input type="text" name="franchise_info_title" value="<?= e(setting('franchise_info_title', 'TACOS GIDA Ailesine Katılmak İster misiniz?')) ?>"></div>
+    <div class="row"><label>Bilgi Paneli Metin 1</label><textarea name="franchise_info_text" rows="4"><?= e(setting('franchise_info_text', "Türkiye'nin dört bir yanında büyümeye devam eden TACOS GIDA ekibine siz de katılın!\nGüçlü marka desteği, kârlı iş modeli, tecrübeli operasyon ağı ve kapsamlı eğitim sistemiyle kendi işinizi kurma yolculuğunuzda yanınızdayız.")) ?></textarea></div>
+    <div class="row"><label>Bilgi Paneli Metin 2</label><textarea name="franchise_info_text_2" rows="3"><?= e(setting('franchise_info_text_2', 'Siz de bulunduğunuz şehirde TACOS GIDA şubesi açmak isterseniz, formu doldurarak bizimle iletişime geçebilirsiniz. Başvuru sonrasında ekibimiz en kısa sürede size ulaşacak.')) ?></textarea></div>
+    <div class="row"><label>Franchise İletişim E-postası</label><input type="email" name="franchise_contact_email" value="<?= e(setting('franchise_contact_email', setting('contact_email'))) ?>"></div>
   </div>
 
   <div class="card">

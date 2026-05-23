@@ -487,16 +487,42 @@ function paginate(int $total, int $per_page, int $current): array {
 
 /* ================== E-POSTA ================== */
 
-function send_mail(string $to, string $subject, string $body): bool {
+function send_mail(string $to, string $subject, string $body, ?string $replyTo = null): bool {
+    $to = trim($to);
+    if ($to === '') {
+        return false;
+    }
+
+    $replyTo = $replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL) ? $replyTo : MAIL_FROM;
     $headers = [
         'MIME-Version: 1.0',
         'Content-Type: text/html; charset=UTF-8',
         'From: ' . mb_encode_mimeheader(MAIL_NAME) . ' <' . MAIL_FROM . '>',
-        'Reply-To: ' . MAIL_FROM,
+        'Reply-To: ' . $replyTo,
         'X-Mailer: PHP/' . PHP_VERSION,
     ];
     $subject = mb_encode_mimeheader($subject, 'UTF-8');
     return @mail($to, $subject, $body, implode("\r\n", $headers));
+}
+
+function form_notification_email(): string {
+    $to = setting('form_notification_email', '');
+    if ($to === '') $to = setting('mail_to', '');
+    if ($to === '') $to = setting('contact_email', '');
+    if ($to === '' && defined('MAIL_TO')) $to = MAIL_TO;
+    return trim($to);
+}
+
+function form_mail_table(array $rows): string {
+    $html = '<table cellpadding="8" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;font-size:14px">';
+    foreach ($rows as $label => $value) {
+        if ($value === null || $value === '') continue;
+        $html .= '<tr>';
+        $html .= '<th align="left" valign="top" style="width:190px;background:#f3f4f6;border:1px solid #e5e7eb;color:#374151">' . e((string)$label) . '</th>';
+        $html .= '<td style="border:1px solid #e5e7eb;color:#111827">' . nl2br_safe((string)$value) . '</td>';
+        $html .= '</tr>';
+    }
+    return $html . '</table>';
 }
 
 /* ================== JSON YANIT ================== */

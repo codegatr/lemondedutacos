@@ -38,17 +38,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $stmt->execute([$name,$phone,$email,$city,$age,$invest,$msg ?: null,$kvkk,$com,client_ip()]);
 
-        $to = setting('mail_to', defined('MAIL_TO') ? MAIL_TO : '');
+        $to = form_notification_email();
         if ($to) {
-            $body = "<h3>Yeni Franchise Başvurusu</h3>"
-                  . "<p><b>Ad-Soyad:</b> " . e($name) . "</p>"
-                  . "<p><b>Telefon:</b> " . e($phone) . "</p>"
-                  . "<p><b>E-posta:</b> " . e($email) . "</p>"
-                  . "<p><b>Şehir:</b> " . e($city) . "</p>"
-                  . "<p><b>Yaş:</b> " . $age . "</p>"
-                  . "<p><b>Yatırım:</b> " . e($invest) . " Milyon TL</p>"
-                  . ($msg ? "<p><b>Notlar:</b><br>" . nl2br_safe($msg) . "</p>" : "");
-            send_mail($to, 'Franchise Başvurusu: ' . $name, $body);
+            $body = "<h2>Yeni Franchise Başvurusu</h2>"
+                  . form_mail_table([
+                      'Ad Soyad' => $name,
+                      'Telefon' => $phone,
+                      'E-posta' => $email,
+                      'Şehir' => $city,
+                      'Yaş' => (string)$age,
+                      'Yatırım Aralığı' => $invest . ' Milyon TL',
+                      'KVKK Onayı' => $kvkk ? 'Evet' : 'Hayır',
+                      'Ticari İleti Onayı' => $com ? 'Evet' : 'Hayır',
+                      'Mesaj / Notlar' => $msg,
+                      'IP' => client_ip(),
+                      'Tarih' => date('d.m.Y H:i'),
+                  ]);
+            if (!send_mail($to, 'Franchise Başvurusu: ' . $name, $body, $email)) {
+                log_activity('mail_failed', null, 'Franchise bildirimi gönderilemedi: ' . $to);
+            }
         }
 
         flash_set('success', 'Başvurunuz alındı. En kısa sürede sizinle iletişime geçeceğiz.');
@@ -56,8 +64,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$franchiseTitle = setting('franchise_title', 'TACOS GIDA Ailesine Katılın');
+$franchiseDesc = setting('franchise_description', 'Fast Food kültürünü ve sektörü en iyi bilen markanın desteğiyle kendi işinizin patronu olmak için harika bir fırsat!');
+$franchiseInfoTitle = setting('franchise_info_title', 'TACOS GIDA Ailesine Katılmak İster misiniz?');
+$franchiseInfoText = setting('franchise_info_text', "Türkiye'nin dört bir yanında büyümeye devam eden TACOS GIDA ekibine siz de katılın!\nGüçlü marka desteği, kârlı iş modeli, tecrübeli operasyon ağı ve kapsamlı eğitim sistemiyle kendi işinizi kurma yolculuğunuzda yanınızdayız.");
+$franchiseInfoText2 = setting('franchise_info_text_2', "Siz de bulunduğunuz şehirde TACOS GIDA şubesi açmak isterseniz, formu doldurarak bizimle iletişime geçebilirsiniz. Başvuru sonrasında ekibimiz en kısa sürede size ulaşacak.");
+$franchiseMail = setting('franchise_contact_email', setting('contact_email', 'info@lemondedutacos.com'));
+
 $page_title = 'Franchise';
-$page_desc  = 'Le Monde Du Tacos franchise başvuru — Türkiye\'nin dört bir yanında büyüyen markamızın ailesine katılın.';
+$page_desc  = $franchiseDesc;
 $page_slug  = 'franchise';
 $extra_css  = "
 .page-banner{
@@ -362,8 +377,8 @@ require __DIR__ . '/includes/header.php';
   <section class="page-banner">
     <div class="pb-inner">
       <span class="tag"><i class="fa-solid fa-handshake" style="margin-right:6px"></i>FRANCHISE</span>
-      <h1>TACOS GIDA Ailesine Katılın</h1>
-      <p>Fast Food kültürünü ve sektörü en iyi bilen markanın desteğiyle kendi işinizin patronu olmak için harika bir fırsat!</p>
+      <h1><?= e($franchiseTitle) ?></h1>
+      <p><?= e($franchiseDesc) ?></p>
     </div>
   </section>
 
@@ -372,12 +387,10 @@ require __DIR__ . '/includes/header.php';
     <!-- SOL: Bilgi paneli -->
     <aside class="fr-info">
       <div class="fr-badge">Franchise Başvuru Formu — TACOS GIDA</div>
-      <h2 class="fr-title">TACOS GIDA Ailesine Katılmak İster misiniz?</h2>
+      <h2 class="fr-title"><?= e($franchiseInfoTitle) ?></h2>
 
       <p class="fr-desc">
-        Türkiye'nin dört bir yanında büyümeye devam eden TACOS GIDA ekibine siz de katılın!
-        Güçlü marka desteği, kârlı iş modeli, tecrübeli operasyon ağı ve kapsamlı eğitim
-        sistemiyle kendi işinizi kurma yolculuğunuzda yanınızdayız.
+        <?= nl2br_safe($franchiseInfoText) ?>
       </p>
 
       <ul class="fr-list">
@@ -389,12 +402,11 @@ require __DIR__ . '/includes/header.php';
       </ul>
 
       <p class="fr-desc">
-        Siz de bulunduğunuz şehirde TACOS GIDA şubesi açmak isterseniz, formu doldurarak
-        bizimle iletişime geçebilirsiniz. Başvuru sonrasında ekibimiz en kısa sürede size ulaşacak.
+        <?= nl2br_safe($franchiseInfoText2) ?>
       </p>
 
       <div class="fr-cta-line">👉 Formu doldurun, ilk adımı birlikte atalım.</div>
-      <div class="fr-mail">info@lemondedutacos.com</div>
+      <div class="fr-mail"><?= e($franchiseMail) ?></div>
 
       <button class="btn-catalog" type="button" id="btnCatalog">
         <i class="fa-solid fa-file-pdf"></i> Franchise Kataloğu İçin Tıklayın

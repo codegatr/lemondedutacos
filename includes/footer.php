@@ -26,7 +26,7 @@
 
   <div class="footer-meta">
     <div style="font-weight:bold;font-family:'Georgia',serif;">
-      Copyright © <?= date('Y') ?> <span style="font-style:italic;text-decoration:underline;">Tüm Hakları Saklıdır</span>
+      <?= e(setting('footer_copyright', 'Copyright © ' . date('Y') . ' Tüm Hakları Saklıdır')) ?>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;">
       Tasarım &amp; Geliştirme: <a href="https://www.codega.com.tr" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700;text-decoration:none;">CODEGA</a>
