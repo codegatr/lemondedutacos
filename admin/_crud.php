@@ -22,9 +22,8 @@ class Crud
 
     public function handle(): void
     {
-        $action = $_GET['action'] ?? $_POST['action'] ?? 'list';
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? $_GET['action'] ?? 'list';
             csrf_required();
             match ($action) {
                 'save'   => $this->save(),
@@ -33,7 +32,10 @@ class Crud
                 'sort'   => $this->sort(),
                 default  => null,
             };
+            return;
         }
+
+        $action = $_GET['action'] ?? 'list';
     }
 
     private function save(): void
