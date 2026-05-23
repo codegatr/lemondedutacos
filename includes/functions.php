@@ -102,11 +102,48 @@ function csrf_check(): bool {
     return is_string($t) && !empty($_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $t);
 }
 
+function same_origin_request(): bool {
+    $host = $_SERVER['HTTP_HOST'] ?? '';
+    if ($host === '') {
+        return false;
+    }
+    $expectedHost = preg_replace('/:\d+$/', '', $host);
+    $expectedHost = preg_replace('/^www\./i', '', (string)$expectedHost);
+
+    foreach (['HTTP_ORIGIN', 'HTTP_REFERER'] as $header) {
+        $value = $_SERVER[$header] ?? '';
+        if ($value === '') {
+            continue;
+        }
+        $originHost = parse_url($value, PHP_URL_HOST);
+        if (!is_string($originHost)) {
+            continue;
+        }
+        $originHost = preg_replace('/^www\./i', '', $originHost);
+        if (strcasecmp((string)$originHost, (string)$expectedHost) === 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function csrf_required(): void {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrf_check()) {
         http_response_code(419);
         die('Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.');
     }
+}
+
+function public_form_csrf_required(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+    if (csrf_check() || same_origin_request()) {
+        return;
+    }
+    http_response_code(419);
+    die('Oturum doğrulaması başarısız. Sayfayı yenileyip tekrar deneyin.');
 }
 
 /* ================== FLASH MESAJ ================== */

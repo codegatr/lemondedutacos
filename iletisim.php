@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/functions.php';
 
 // Form gönderildi
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    csrf_required();
+    public_form_csrf_required();
 
     if (!rate_limit('contact:' . client_ip(), 5, 600)) {
         flash_set('error', 'Çok sık gönderim. Lütfen 10 dakika sonra tekrar deneyin.');
